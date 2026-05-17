@@ -11,6 +11,9 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 String greet({required String name}) =>
     RustLib.instance.api.crateApiSimpleGreet(name: name);
 
+Future<bool> testMysqlConnection({required String url}) =>
+    RustLib.instance.api.crateApiSimpleTestMysqlConnection(url: url);
+
 Future<List<String>> getMysqlDatabases({required String url}) =>
     RustLib.instance.api.crateApiSimpleGetMysqlDatabases(url: url);
 

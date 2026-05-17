@@ -12,6 +12,16 @@ pub fn init_app() {
 use sqlx::mysql::{MySqlPool, MySqlRow};
 use sqlx::{Column, Row, TypeInfo, ValueRef};
 
+pub async fn test_mysql_connection(url: String) -> anyhow::Result<bool> {
+    match MySqlPool::connect(&url).await {
+        Ok(pool) => {
+            let res = sqlx::query("SELECT 1").fetch_one(&pool).await;
+            Ok(res.is_ok())
+        }
+        Err(_) => Ok(false),
+    }
+}
+
 pub async fn get_mysql_databases(url: String) -> anyhow::Result<Vec<String>> {
     let pool = MySqlPool::connect(&url).await?;
     let rows = sqlx::query("SHOW DATABASES").fetch_all(&pool).await?;

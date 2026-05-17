@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../connections/models/database_connection.dart';
@@ -42,18 +43,45 @@ class _WorkspacePageState extends State<WorkspacePage> {
   final List<WorkspaceTab> _tabs = [];
   String? _activeTabId;
 
+  bool _isConnectionAlive = true;
+  bool _isCheckingConnection = false;
+  Timer? _connectionCheckTimer;
+
   @override
   void initState() {
     super.initState();
     _fetchDatabases();
+    _checkConnection();
+    _connectionCheckTimer = Timer.periodic(const Duration(seconds: 15), (_) => _checkConnection());
   }
 
   @override
   void dispose() {
+    _connectionCheckTimer?.cancel();
     for (var controller in _tableSearchControllers.values) {
       controller.dispose();
     }
     super.dispose();
+  }
+
+  Future<void> _checkConnection() async {
+    if (_isCheckingConnection) return;
+    setState(() => _isCheckingConnection = true);
+    try {
+      await runMysqlQuery(url: widget.connection.url, database: '', query: 'SELECT 1');
+      if (mounted && !_isConnectionAlive) setState(() => _isConnectionAlive = true);
+    } catch (e) {
+      if (mounted && _isConnectionAlive) setState(() => _isConnectionAlive = false);
+    } finally {
+      if (mounted) setState(() => _isCheckingConnection = false);
+    }
+  }
+
+  Future<void> _reconnect() async {
+    await _checkConnection();
+    if (_isConnectionAlive) {
+      _fetchDatabases();
+    }
   }
 
   Future<void> _fetchDatabases() async {
@@ -115,13 +143,13 @@ class _WorkspacePageState extends State<WorkspacePage> {
     });
   }
 
-  void _openQueryTab(String db) {
-    final tabId = "query_${db}_${DateTime.now().millisecondsSinceEpoch}";
+  void _openQueryTab() {
+    final tabId = "query_${DateTime.now().millisecondsSinceEpoch}";
     setState(() {
       _tabs.add(WorkspaceTab(
         id: tabId,
-        title: "Query - $db",
-        databaseName: db,
+        title: "New Query",
+        databaseName: '',
         tableName: null,
       ));
       _activeTabId = tabId;
@@ -400,6 +428,48 @@ class _WorkspacePageState extends State<WorkspacePage> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
         ),
+        actions: [
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: _isConnectionAlive ? Colors.green : Colors.red,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    _isConnectionAlive ? "Connected" : "Disconnected",
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: _isConnectionAlive ? Colors.green : Colors.red,
+                    ),
+                  ),
+                  if (!_isConnectionAlive) ...[
+                    const SizedBox(width: 8),
+                    TextButton(
+                      onPressed: _isCheckingConnection ? null : _reconnect,
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      child: _isCheckingConnection 
+                          ? const SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 2))
+                          : const Text("RECONNECT", style: TextStyle(fontSize: 11, color: Colors.red)),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          )
+        ],
       ),
       body: Row(
         children: [
@@ -510,6 +580,20 @@ class _WorkspacePageState extends State<WorkspacePage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              InkWell(
+                onTap: _openQueryTab,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.terminal, size: 16, color: Color(0xFF333333)),
+                      const SizedBox(width: 12),
+                      const Text("New Query", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Color(0xFF333333))),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -600,21 +684,6 @@ class _WorkspacePageState extends State<WorkspacePage> {
                 shape: const Border(), // Remove borders
                 childrenPadding: EdgeInsets.zero,
                 children: [
-                  // Action to open query tab
-                  InkWell(
-                    key: ValueKey('query_btn_$db'),
-                    onTap: () => _openQueryTab(db),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 12),
-                      child: const Row(
-                        children: [
-                          Icon(Icons.terminal, size: 16, color: Color(0xFF555555)),
-                          SizedBox(width: 12),
-                          Text("New Query", style: TextStyle(fontSize: 13, fontWeight: FontWeight.w400, color: Color(0xFF555555))),
-                        ],
-                      ),
-                    ),
-                  ),
                   // Search box for tables inside this DB
                   if (allTables.isNotEmpty)
                     PageStorage(
@@ -812,6 +881,8 @@ class _TableDataWidgetState extends State<_TableDataWidget> {
   int _totalRows = 0;
   bool _isLoadingCount = true;
 
+  final Set<int> _selectedRowIndices = {};
+
   @override
   void initState() {
     super.initState();
@@ -845,6 +916,7 @@ class _TableDataWidgetState extends State<_TableDataWidget> {
     setState(() {
       _isLoading = true;
       _error = '';
+      _selectedRowIndices.clear();
     });
 
     try {
@@ -867,6 +939,154 @@ class _TableDataWidgetState extends State<_TableDataWidget> {
           _isLoading = false;
         });
       }
+    }
+  }
+
+  Future<void> _addNewRow() async {
+    if (_result == null || _result!.columns.isEmpty) return;
+    
+    final Map<String, String> newValues = {};
+    for (var col in _result!.columns) {
+      newValues[col] = '';
+    }
+
+    final bool? shouldSave = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return Dialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+              child: Container(
+                width: 400,
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text("Add New Row", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFF333333))),
+                    const SizedBox(height: 24),
+                    Flexible(
+                      child: SingleChildScrollView(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: _result!.columns.map((col) {
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 16),
+                              child: TextField(
+                                decoration: InputDecoration(
+                                  labelText: col,
+                                  labelStyle: const TextStyle(fontSize: 13, color: Color(0xFF888888)),
+                                  enabledBorder: const OutlineInputBorder(borderSide: BorderSide(color: Color(0xFFEAEAEA))),
+                                  focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: Color(0xFF333333))),
+                                  isDense: true,
+                                ),
+                                onChanged: (val) => newValues[col] = val,
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("CANCEL", style: TextStyle(color: Color(0xFF888888)))),
+                        const SizedBox(width: 8),
+                        ElevatedButton(
+                          onPressed: () => Navigator.pop(context, true), 
+                          style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF333333), foregroundColor: Colors.white, elevation: 0),
+                          child: const Text("SAVE")
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+        );
+      }
+    );
+
+    if (shouldSave == true) {
+      final cols = newValues.entries.where((e) => e.value.isNotEmpty).map((e) => '`${e.key}`').join(', ');
+      final vals = newValues.entries.where((e) => e.value.isNotEmpty).map((e) => "'${e.value.replaceAll("'", "''")}'").join(', ');
+      
+      String query;
+      if (cols.isEmpty) {
+        query = 'INSERT INTO `${widget.tableName}` () VALUES ()';
+      } else {
+        query = 'INSERT INTO `${widget.tableName}` ($cols) VALUES ($vals)';
+      }
+      
+      try {
+        await runMysqlQuery(url: widget.connectionUrl, database: widget.databaseName, query: query);
+        _fetchCount();
+        _fetchData();
+      } catch (e) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e"), backgroundColor: Colors.red));
+      }
+    }
+  }
+
+  Future<void> _deleteSelectedRows() async {
+    if (_selectedRowIndices.isEmpty || _result == null) return;
+    
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+        child: Container(
+          width: 400,
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text("Delete Rows", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFFD32F2F))),
+              const SizedBox(height: 16),
+              Text("Are you sure you want to delete ${_selectedRowIndices.length} row(s)? This action cannot be undone.", style: const TextStyle(fontSize: 13, color: Color(0xFF555555), height: 1.5)),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("CANCEL", style: TextStyle(color: Color(0xFF888888)))),
+                  const SizedBox(width: 8),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFD32F2F), foregroundColor: Colors.white, elevation: 0),
+                    onPressed: () => Navigator.pop(context, true), 
+                    child: const Text("DELETE")
+                  ),
+                ],
+              )
+            ],
+          ),
+        ),
+      )
+    );
+
+    if (confirm != true) return;
+
+    final firstCol = _result!.columns.first;
+    final List<String> pkValues = [];
+    for (int idx in _selectedRowIndices) {
+      pkValues.add(_result!.rows[idx][0]);
+    }
+    
+    final inClause = pkValues.map((v) => "'${v.replaceAll("'", "''")}'").join(', ');
+    final query = "DELETE FROM `${widget.tableName}` WHERE `$firstCol` IN ($inClause)";
+
+    try {
+      await runMysqlQuery(url: widget.connectionUrl, database: widget.databaseName, query: query);
+      setState(() {
+        _selectedRowIndices.clear();
+      });
+      _fetchCount();
+      _fetchData();
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e"), backgroundColor: Colors.red));
     }
   }
 
@@ -973,6 +1193,24 @@ class _TableDataWidgetState extends State<_TableDataWidget> {
                 children: [
                   Text("Database: ${widget.databaseName} > Table: ${widget.tableName}", style: const TextStyle(fontSize: 12, color: Color(0xFF888888))),
                   const Spacer(),
+                  if (_selectedRowIndices.isNotEmpty) ...[
+                    Text("${_selectedRowIndices.length} selected", style: const TextStyle(fontSize: 12, color: Color(0xFFD32F2F))),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline, size: 16, color: Color(0xFFD32F2F)),
+                      onPressed: _deleteSelectedRows,
+                      tooltip: "Delete Selected",
+                    ),
+                    const SizedBox(width: 8),
+                    Container(width: 1, height: 16, color: const Color(0xFFEAEAEA)),
+                    const SizedBox(width: 8),
+                  ],
+                  IconButton(
+                    icon: const Icon(Icons.add, size: 16, color: Color(0xFF555555)),
+                    onPressed: _addNewRow,
+                    tooltip: "Add Row",
+                  ),
+                  const SizedBox(width: 8),
                   IconButton(
                     icon: const Icon(Icons.refresh, size: 16, color: Color(0xFF555555)),
                     onPressed: () {
@@ -990,6 +1228,25 @@ class _TableDataWidgetState extends State<_TableDataWidget> {
               : _buildDataGrid(
                   context, 
                   data,
+                  selectedIndices: _selectedRowIndices,
+                  onSelectAll: (selected) {
+                    setState(() {
+                      if (selected == true) {
+                        _selectedRowIndices.addAll(Iterable.generate(data.rows.length));
+                      } else {
+                        _selectedRowIndices.clear();
+                      }
+                    });
+                  },
+                  onSelectChanged: (index, selected) {
+                    setState(() {
+                      if (selected) {
+                        _selectedRowIndices.add(index);
+                      } else {
+                        _selectedRowIndices.remove(index);
+                      }
+                    });
+                  },
                   onSave: (column, oldValue, newValue, rowMap) async {
                     if (oldValue == newValue) return;
                     
@@ -1144,6 +1401,9 @@ Widget _buildDataGrid(
   BuildContext context, 
   QueryResult result, {
   Future<void> Function(String column, String oldValue, String newValue, Map<String, String> rowMap)? onSave,
+  Set<int>? selectedIndices,
+  Function(int, bool)? onSelectChanged,
+  Function(bool?)? onSelectAll,
 }) {
   if (result.columns.isEmpty) {
     return const Center(child: Text("0 rows returned.", style: TextStyle(color: Color(0xFF999999))));
@@ -1155,6 +1415,8 @@ Widget _buildDataGrid(
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: DataTable(
+            showCheckboxColumn: onSelectChanged != null,
+            onSelectAll: onSelectAll,
             headingRowColor: WidgetStateProperty.resolveWith((states) => const Color(0xFFFAFAFA)),
             dataRowColor: WidgetStateProperty.resolveWith((states) => Colors.white),
             dividerThickness: 1,
@@ -1168,12 +1430,16 @@ Widget _buildDataGrid(
                 style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 11, color: Color(0xFF888888), letterSpacing: 0.5),
               )
             )).toList(),
-            rows: result.rows.map((row) {
+            rows: result.rows.asMap().entries.map((rowEntry) {
+              final rowIndex = rowEntry.key;
+              final row = rowEntry.value;
               final rowMap = {
                 for (var i = 0; i < result.columns.length; i++) result.columns[i]: row[i]
               };
               
               return DataRow(
+                selected: selectedIndices?.contains(rowIndex) ?? false,
+                onSelectChanged: onSelectChanged == null ? null : (selected) => onSelectChanged(rowIndex, selected ?? false),
                 cells: row.asMap().entries.map((entry) {
                   final colIndex = entry.key;
                   final cell = entry.value;
