@@ -2,8 +2,11 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 
-// Global state for connections (saved to ~/.grid_connections.json)
-final List<DatabaseConnection> globalConnections = [];
+// Global reactive state repository for connections (saved to ~/.grid_connections.json)
+final ConnectionRepository connectionRepository = ConnectionRepository();
+
+// Legacy getter for backward-compatibility if accessed in read-only mode
+List<DatabaseConnection> get globalConnections => connectionRepository.connections;
 
 class DatabaseConnection {
   final String id;
@@ -55,7 +58,11 @@ class DatabaseConnection {
 }
 
 class ConnectionStorage {
+  static File? _cachedFile;
+
   static File _getFile() {
+    if (_cachedFile != null) return _cachedFile!;
+    
     String? homePath;
     if (Platform.isWindows) {
       homePath = Platform.environment['USERPROFILE'] ?? Platform.environment['APPDATA'];
@@ -64,11 +71,12 @@ class ConnectionStorage {
     }
     
     if (homePath != null && Directory(homePath).existsSync()) {
-      return File('$homePath/.grid_connections.json');
+      _cachedFile = File('$homePath/.grid_connections.json');
+    } else {
+      _cachedFile = File('${Directory.systemTemp.path}/.grid_connections.json');
     }
     
-    // Fallback if home directory isn't found/accessible
-    return File('${Directory.systemTemp.path}/.grid_connections.json');
+    return _cachedFile!;
   }
 
   static Future<List<DatabaseConnection>> loadConnections() async {
@@ -96,12 +104,57 @@ class ConnectionStorage {
   }
 }
 
+class ConnectionRepository extends ChangeNotifier {
+  final List<DatabaseConnection> _connections = [];
+
+  List<DatabaseConnection> get connections => List.unmodifiable(_connections);
+
+  Future<void> load() async {
+    final loaded = await ConnectionStorage.loadConnections();
+    _connections.clear();
+    _connections.addAll(loaded);
+    notifyListeners();
+  }
+
+  Future<void> save() async {
+    await ConnectionStorage.saveConnections(_connections);
+  }
+
+  Future<void> add(DatabaseConnection connection) async {
+    _connections.add(connection);
+    notifyListeners();
+    await save();
+  }
+
+  Future<void> remove(DatabaseConnection connection) async {
+    _connections.remove(connection);
+    notifyListeners();
+    await save();
+  }
+
+  Future<void> update(DatabaseConnection connection, {
+    required String name,
+    required String type,
+    required String host,
+    required int port,
+    required String username,
+    required String password,
+  }) async {
+    connection.name = name;
+    connection.type = type;
+    connection.host = host;
+    connection.port = port;
+    connection.username = username;
+    connection.password = password;
+    notifyListeners();
+    await save();
+  }
+}
+
 Future<void> loadSavedConnections() async {
-  final loaded = await ConnectionStorage.loadConnections();
-  globalConnections.clear();
-  globalConnections.addAll(loaded);
+  await connectionRepository.load();
 }
 
 Future<void> saveConnections() async {
-  await ConnectionStorage.saveConnections(globalConnections);
+  await connectionRepository.save();
 }

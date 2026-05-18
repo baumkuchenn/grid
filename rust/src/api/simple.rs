@@ -167,7 +167,15 @@ fn decode_mysql_cell(row: &MySqlRow, index: usize) -> String {
                 .unwrap_or_else(|_| "TIME".to_string())
         }
         "BLOB" | "TINYBLOB" | "MEDIUMBLOB" | "LONGBLOB" | "BINARY" | "VARBINARY" => {
-            "[BLOB]".to_string()
+            if let Ok(bytes) = row.try_get::<Vec<u8>, _>(index) {
+                if let Ok(s) = String::from_utf8(bytes) {
+                    s
+                } else {
+                    "[BLOB]".to_string()
+                }
+            } else {
+                "[BLOB]".to_string()
+            }
         }
         _ => {
             row.try_get::<String, _>(index).unwrap_or_else(|_| format!("[{}]", type_name))
