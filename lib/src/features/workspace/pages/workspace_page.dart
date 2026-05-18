@@ -188,7 +188,7 @@ class _WorkspacePageState extends State<WorkspacePage> {
                         _BreathingConnectionDot(isAlive: _controller.isConnectionAlive),
                         const SizedBox(width: 8),
                         Text(
-                          _controller.isConnectionAlive ? "At rest / Connected" : "Offline / Quiet",
+                          _controller.isConnectionAlive ? "Connected" : "Offline",
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,

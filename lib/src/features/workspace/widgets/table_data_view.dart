@@ -607,58 +607,66 @@ class TableDataViewState extends State<TableDataView> {
                     const SizedBox(width: 8),
                   ],
                   // Filter toggle — stable width using Stack badge, never shifts
-                  GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        _showFilterBar = !_showFilterBar;
-                      });
-                    },
-                    child: Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.filter_alt_outlined,
-                                size: 14,
-                                color: _filters.isNotEmpty ? const Color(0xFF7F0019) : const Color(0xFF73726F),
-                              ),
-                              const SizedBox(width: 4),
-                              const Text(
-                                "FILTER",
-                                style: TextStyle(
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.w700,
-                                  color: Color(0xFF73726F),
-                                  letterSpacing: 0.5,
+                  Material(
+                    color: Colors.transparent, // Keeps the underlying top bar Washi color visible
+                    child: InkWell(
+                      onTap: () {
+                        setState(() {
+                          _showFilterBar = !_showFilterBar;
+                        });
+                      },
+                      mouseCursor: SystemMouseCursors.click, // Ensures desktop cursor transforms to pointer
+                      borderRadius: BorderRadius.circular(4),
+                      hoverColor: const Color(0xFFE8E5DF).withOpacity(0.5), // Renders on top of the Material canvas
+                      splashColor: const Color(0xFFE8E5DF).withOpacity(0.3),
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          Container(
+                            // Slightly taller padding bounds to align perfectly with the height of adjacent circular icons
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.filter_alt_outlined,
+                                  size: 14,
+                                  color: _filters.isNotEmpty ? const Color(0xFF7F0019) : const Color(0xFF73726F),
                                 ),
-                              ),
-                            ],
+                                const SizedBox(width: 4),
+                                const Text(
+                                  "FILTER",
+                                  style: TextStyle(
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w700,
+                                    color: Color(0xFF73726F),
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                        if (_filters.isNotEmpty)
-                          Positioned(
-                            top: -2,
-                            right: -2,
-                            child: Container(
-                              width: 14,
-                              height: 14,
-                              decoration: const BoxDecoration(
-                                color: Color(0xFF7F0019), // Muji Red
-                                shape: BoxShape.circle,
-                              ),
-                              child: Center(
-                                child: Text(
-                                  '${_filters.length}',
-                                  style: const TextStyle(fontSize: 8, color: Colors.white, fontWeight: FontWeight.w700),
+                          if (_filters.isNotEmpty)
+                            Positioned(
+                              top: 0,
+                              right: -2,
+                              child: Container(
+                                width: 14,
+                                height: 14,
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFF7F0019), // Muji Red active indicators
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    '${_filters.length}',
+                                    style: const TextStyle(fontSize: 8, color: Colors.white, fontWeight: FontWeight.w700),
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -752,7 +760,7 @@ class TableDataViewState extends State<TableDataView> {
 
   Widget _buildFilterBar(List<String> columns) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20), // Spaced out backdrop boundary
       decoration: const BoxDecoration(
         color: Color(0xFFF3EFE9), // Kraft Sand backdrop
         border: Border(bottom: BorderSide(color: Color(0xFFE8E5DF), width: 0.5)),
@@ -760,21 +768,21 @@ class TableDataViewState extends State<TableDataView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Section header row — always present
+          // Section Header Row
           Row(
             children: [
               const Text(
                 "FILTER RULES",
                 style: TextStyle(
-                  fontSize: 9,
+                  fontSize: 10,
                   fontWeight: FontWeight.w700,
                   color: Color(0xFF73726F),
-                  letterSpacing: 1.0,
+                  letterSpacing: 1.2,
                 ),
               ),
               const Spacer(),
               if (_filters.isNotEmpty)
-                // CLEAR ALL: visually delineated, not inline with section title
+                // 1. CLEAR ALL: Added generous tactical padding
                 OutlinedButton(
                   onPressed: () {
                     setState(() => _filters.clear());
@@ -783,7 +791,7 @@ class TableDataViewState extends State<TableDataView> {
                   style: OutlinedButton.styleFrom(
                     foregroundColor: const Color(0xFFAC6B62),
                     side: const BorderSide(color: Color(0xFFAC6B62), width: 0.5),
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10), // Enhanced, spacious padding
                     minimumSize: Size.zero,
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(2)),
@@ -799,21 +807,23 @@ class TableDataViewState extends State<TableDataView> {
                 ),
             ],
           ),
-          // Filter rows — only shown when there are filters
+          
+          // Filter Rows Section
           if (_filters.isNotEmpty) ...[
-            const SizedBox(height: 10),
+            const SizedBox(height: 16), // Unified grid gap
             ListView.separated(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: _filters.length,
-              separatorBuilder: (context, index) => const SizedBox(height: 6),
+              separatorBuilder: (context, index) => const SizedBox(height: 10), // Clean layout spacing
               itemBuilder: (context, index) {
                 final filter = _filters[index];
                 return Row(
+                  crossAxisAlignment: CrossAxisAlignment.center, // Flawless vertical centerline alignment
                   children: [
-                    // SQL keyword label — fixed width for alignment
+                    // SQL Keyword Label
                     SizedBox(
-                      width: 44,
+                      width: 56, // Slightly wider to feel less cramped
                       child: Text(
                         index == 0 ? "WHERE" : "AND",
                         style: const TextStyle(
@@ -824,13 +834,13 @@ class TableDataViewState extends State<TableDataView> {
                         ),
                       ),
                     ),
-                    // Column selector
+                    // Column Selector
                     _buildColumnDropdown(filter, columns),
-                    const SizedBox(width: 6),
-                    // Operator selector
+                    const SizedBox(width: 10),
+                    // Operator Selector
                     _buildOperatorDropdown(filter),
-                    const SizedBox(width: 6),
-                    // Value input — flex-expanded so it fills remaining space gracefully
+                    const SizedBox(width: 10),
+                    // Value Input
                     if (filter.operator != 'is_null' && filter.operator != 'is_not_null')
                       Expanded(
                         child: _FilterValueInput(
@@ -844,8 +854,8 @@ class TableDataViewState extends State<TableDataView> {
                       )
                     else
                       const Spacer(),
-                    const SizedBox(width: 6),
-                    // Remove filter — always at far right
+                    const SizedBox(width: 12),
+                    // Remove Filter Button
                     IconButton(
                       icon: const Icon(Icons.close, size: 14, color: Color(0xFF73726F)),
                       hoverColor: const Color(0xFFFAF8F5),
@@ -863,8 +873,9 @@ class TableDataViewState extends State<TableDataView> {
               },
             ),
           ],
-          // ADD FILTER button — always at the bottom in the same position
-          const SizedBox(height: 8),
+          
+          // 2. ADD FILTER: Shifted down slightly with custom padding layout
+          const SizedBox(height: 14),
           _buildAddFilterButton(columns),
         ],
       ),
@@ -872,69 +883,91 @@ class TableDataViewState extends State<TableDataView> {
   }
 
   Widget _buildColumnDropdown(TableFilter filter, List<String> columns) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: const Color(0xFFE8E5DF), width: 0.5),
-        borderRadius: BorderRadius.circular(2),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: columns.contains(filter.columnName) ? filter.columnName : columns.first,
-          items: columns.map((col) => DropdownMenuItem(
-            value: col,
-            child: Text(
-              col, 
-              style: const TextStyle(fontSize: 11, fontFamily: 'monospace', color: Color(0xFF2D2D2D)),
+    final currentValue = columns.contains(filter.columnName) ? filter.columnName : columns.first;
+    
+    return SizedBox(
+      width: 130, // Absolute, unyielding horizontal control block
+      height: 32, // Perfect, crisp desktop ledger line height
+      child: PopupMenuButton<String>(
+        onSelected: (val) {
+          setState(() => filter.columnName = val);
+          _onFiltersUpdated(debounce: false);
+        },
+        tooltip: "Select column",
+        offset: const Offset(0, 30),
+        color: const Color(0xFFFAF8F5),
+        itemBuilder: (context) => columns.map((col) => PopupMenuItem(
+          value: col,
+          height: 32,
+          child: Text(col, style: const TextStyle(fontSize: 11, fontFamily: 'monospace', color: Color(0xFF2D2D2D))),
+        )).toList(),
+        // We use a completely disabled TextField to replicate the identical container spec
+        child: AbsorbPointer(
+          child: TextField(
+            readOnly: true,
+            style: const TextStyle(fontSize: 11, color: Color(0xFF2D2D2D), fontFamily: 'monospace'),
+            decoration: InputDecoration(
+              hintText: currentValue,
+              hintStyle: const TextStyle(fontSize: 11, color: Color(0xFF2D2D2D), fontFamily: 'monospace'),
+              fillColor: Colors.white,
+              filled: true,
+              isDense: true,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              suffixIcon: const Icon(Icons.arrow_drop_down, size: 14, color: Color(0xFF73726F)),
+              suffixIconConstraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+              enabledBorder: const OutlineInputBorder(
+                borderSide: BorderSide(color: Color(0xFFE8E5DF), width: 0.5),
+                borderRadius: BorderRadius.all(Radius.circular(2)),
+              ),
             ),
-          )).toList(),
-          onChanged: (val) {
-            if (val != null) {
-              setState(() {
-                filter.columnName = val;
-              });
-              _onFiltersUpdated(debounce: false);
-            }
-          },
-          style: const TextStyle(fontSize: 11, color: Color(0xFF2D2D2D)),
-          dropdownColor: const Color(0xFFFAF8F5),
-          icon: const Icon(Icons.arrow_drop_down, size: 14, color: Color(0xFF73726F)),
-          isDense: true,
+          ),
         ),
       ),
     );
   }
 
   Widget _buildOperatorDropdown(TableFilter filter) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: const Color(0xFFE8E5DF), width: 0.5),
-        borderRadius: BorderRadius.circular(2),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: filter.operator,
-          items: TableFilter.operators.map((op) => DropdownMenuItem(
-            value: op['value'],
-            child: Text(
-              op['label']!, 
-              style: const TextStyle(fontSize: 11, color: Color(0xFF2D2D2D)),
+    final currentOpMap = TableFilter.operators.firstWhere(
+      (op) => op['value'] == filter.operator,
+      orElse: () => TableFilter.operators.first,
+    );
+    final currentLabel = currentOpMap['label']!;
+
+    return SizedBox(
+      width: 110, // Perfectly proportional operator frame step
+      height: 32, // Exact matching desktop line baseline
+      child: PopupMenuButton<String>(
+        onSelected: (val) {
+          setState(() => filter.operator = val);
+          _onFiltersUpdated(debounce: false);
+        },
+        tooltip: "Select condition",
+        offset: const Offset(0, 30),
+        color: const Color(0xFFFAF8F5),
+        itemBuilder: (context) => TableFilter.operators.map((op) => PopupMenuItem(
+          value: op['value'],
+          height: 32,
+          child: Text(op['label']!, style: const TextStyle(fontSize: 11, color: Color(0xFF2D2D2D))),
+        )).toList(),
+        child: AbsorbPointer(
+          child: TextField(
+            readOnly: true,
+            style: const TextStyle(fontSize: 11, color: Color(0xFF2D2D2D)),
+            decoration: InputDecoration(
+              hintText: currentLabel,
+              hintStyle: const TextStyle(fontSize: 11, color: Color(0xFF2D2D2D)),
+              fillColor: Colors.white,
+              filled: true,
+              isDense: true,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              suffixIcon: const Icon(Icons.arrow_drop_down, size: 14, color: Color(0xFF73726F)),
+              suffixIconConstraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+              enabledBorder: const OutlineInputBorder(
+                borderSide: BorderSide(color: Color(0xFFE8E5DF), width: 0.5),
+                borderRadius: BorderRadius.all(Radius.circular(2)),
+              ),
             ),
-          )).toList(),
-          onChanged: (val) {
-            if (val != null) {
-              setState(() {
-                filter.operator = val;
-              });
-              _onFiltersUpdated(debounce: false);
-            }
-          },
-          dropdownColor: const Color(0xFFFAF8F5),
-          icon: const Icon(Icons.arrow_drop_down, size: 14, color: Color(0xFF73726F)),
-          isDense: true,
+          ),
         ),
       ),
     );
@@ -953,7 +986,7 @@ class TableDataViewState extends State<TableDataView> {
           });
         }
       },
-      icon: const Icon(Icons.add, size: 10, color: Color(0xFF2D2D2D)),
+      icon: const Icon(Icons.add, size: 11, color: Color(0xFF2D2D2D)),
       label: const Text(
         "ADD FILTER",
         style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: Color(0xFF2D2D2D), letterSpacing: 0.5),
@@ -962,7 +995,7 @@ class TableDataViewState extends State<TableDataView> {
         backgroundColor: Colors.white,
         side: const BorderSide(color: Color(0xFFE8E5DF), width: 0.5),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(2)),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), // Spacious tactile button padding
         minimumSize: Size.zero,
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
       ),
@@ -1010,24 +1043,23 @@ class _FilterValueInputState extends State<_FilterValueInput> {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 180,
-      height: 28,
+      height: 32, // Matches the new dropdown replacement blueprints exactly
       child: TextField(
         controller: _controller,
         style: const TextStyle(fontSize: 11, color: Color(0xFF2D2D2D), fontFamily: 'monospace'),
         decoration: const InputDecoration(
-          hintText: "Value...",
-          hintStyle: TextStyle(fontSize: 10, color: Color(0xFFC4C2BC)),
+          hintText: "Enter value...",
+          hintStyle: TextStyle(fontSize: 11, color: Color(0xFFC4C2BC)),
           fillColor: Colors.white,
           filled: true,
           isDense: true,
-          contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8), // Perfect text baseline symmetry
           enabledBorder: OutlineInputBorder(
             borderSide: BorderSide(color: Color(0xFFE8E5DF), width: 0.5),
             borderRadius: BorderRadius.all(Radius.circular(2)),
           ),
           focusedBorder: OutlineInputBorder(
-            borderSide: BorderSide(color: Color(0xFF7F0019), width: 1.0),
+            borderSide: BorderSide(color: Color(0xFF73726F), width: 0.7),
             borderRadius: BorderRadius.all(Radius.circular(2)),
           ),
         ),
