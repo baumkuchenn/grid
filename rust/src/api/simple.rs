@@ -9,11 +9,47 @@ pub fn init_app() {
     flutter_rust_bridge::setup_default_user_utils();
 }
 
-use sqlx::mysql::{MySqlPool, MySqlRow};
+use sqlx::mysql::{MySqlPool, MySqlPoolOptions, MySqlRow};
 use sqlx::{Column, Row, TypeInfo, ValueRef};
+use std::collections::HashMap;
+use std::sync::OnceLock;
+use tokio::sync::Mutex;
+
+// Global pool cache: reuses authenticated connections per unique URL.
+// MySqlPool::connect() pays full TCP handshake + MySQL auth on every call —
+// this cache ensures that cost is paid exactly once per connection string.
+static POOL_CACHE: OnceLock<Mutex<HashMap<String, MySqlPool>>> = OnceLock::new();
+
+fn pool_cache() -> &'static Mutex<HashMap<String, MySqlPool>> {
+    POOL_CACHE.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+async fn get_or_create_pool(url: &str) -> anyhow::Result<MySqlPool> {
+    {
+        // Fast path: pool already exists — acquire read-equivalent with short lock window.
+        let cache = pool_cache().lock().await;
+        if let Some(pool) = cache.get(url) {
+            return Ok(pool.clone());
+        }
+    }
+    // Slow path (first connection only): create pool, then insert.
+    let pool = MySqlPoolOptions::new()
+        .max_connections(5)
+        .connect(url)
+        .await?;
+    let mut cache = pool_cache().lock().await;
+    // Guard against a race where two callers both missed the fast path.
+    cache.entry(url.to_string()).or_insert_with(|| pool.clone());
+    Ok(pool)
+}
+
+pub struct QueryResult {
+    pub columns: Vec<String>,
+    pub rows: Vec<Vec<String>>,
+}
 
 pub async fn test_mysql_connection(url: String) -> anyhow::Result<bool> {
-    match MySqlPool::connect(&url).await {
+    match get_or_create_pool(&url).await {
         Ok(pool) => {
             let res = sqlx::query("SELECT 1").fetch_one(&pool).await;
             Ok(res.is_ok())
@@ -23,7 +59,7 @@ pub async fn test_mysql_connection(url: String) -> anyhow::Result<bool> {
 }
 
 pub async fn get_mysql_databases(url: String) -> anyhow::Result<Vec<String>> {
-    let pool = MySqlPool::connect(&url).await?;
+    let pool = get_or_create_pool(&url).await?;
     let rows = sqlx::query("SHOW DATABASES").fetch_all(&pool).await?;
     let databases = rows
         .into_iter()
@@ -32,14 +68,9 @@ pub async fn get_mysql_databases(url: String) -> anyhow::Result<Vec<String>> {
     Ok(databases)
 }
 
-pub struct QueryResult {
-    pub columns: Vec<String>,
-    pub rows: Vec<Vec<String>>,
-}
-
 pub async fn get_mysql_tables(url: String, database: String) -> anyhow::Result<Vec<String>> {
     let connection_string = format!("{}/{}", url.trim_end_matches('/'), database);
-    let pool = MySqlPool::connect(&connection_string).await?;
+    let pool = get_or_create_pool(&connection_string).await?;
     let rows = sqlx::query("SHOW TABLES").fetch_all(&pool).await?;
     let tables = rows
         .into_iter()
@@ -50,7 +81,7 @@ pub async fn get_mysql_tables(url: String, database: String) -> anyhow::Result<V
 
 pub async fn run_mysql_query(url: String, database: String, query: String) -> anyhow::Result<QueryResult> {
     let connection_string = format!("{}/{}", url.trim_end_matches('/'), database);
-    let pool = MySqlPool::connect(&connection_string).await?;
+    let pool = get_or_create_pool(&connection_string).await?;
 
     let rows = sqlx::query(&query).fetch_all(&pool).await?;
     
@@ -186,19 +217,19 @@ fn decode_mysql_cell(row: &MySqlRow, index: usize) -> String {
 }
 
 pub async fn execute_mysql_action(url: String, database: String, query: String, disable_fk: bool) -> anyhow::Result<()> {
-    use sqlx::Connection;
     let connection_string = format!("{}/{}", url.trim_end_matches('/'), database);
-    let mut conn = sqlx::MySqlConnection::connect(&connection_string).await?;
-    
+    let pool = get_or_create_pool(&connection_string).await?;
+    let mut conn = pool.acquire().await?;
+
     if disable_fk {
-        sqlx::query("SET FOREIGN_KEY_CHECKS=0").execute(&mut conn).await?;
+        sqlx::query("SET FOREIGN_KEY_CHECKS=0").execute(&mut *conn).await?;
     }
-    
-    sqlx::query(&query).execute(&mut conn).await?;
-    
+
+    sqlx::query(&query).execute(&mut *conn).await?;
+
     if disable_fk {
-        sqlx::query("SET FOREIGN_KEY_CHECKS=1").execute(&mut conn).await?;
+        sqlx::query("SET FOREIGN_KEY_CHECKS=1").execute(&mut *conn).await?;
     }
-    
+
     Ok(())
 }

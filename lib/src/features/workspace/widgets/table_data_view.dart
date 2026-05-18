@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'dart:async';
 import '../../../rust/api/simple.dart';
+import '../models/table_filter.dart';
 import 'data_grid_view.dart';
 import 'workspace_dialogs.dart';
 import 'washi_ledger_dialog.dart';
@@ -32,6 +34,11 @@ class TableDataViewState extends State<TableDataView> {
   bool _isLoadingCount = true;
 
   final Set<int> _selectedRowIndices = {};
+  
+  // Filter state variables
+  final List<TableFilter> _filters = [];
+  bool _showFilterBar = false;
+  Timer? _debounceTimer;
 
   @override
   void initState() {
@@ -40,12 +47,51 @@ class TableDataViewState extends State<TableDataView> {
     _fetchData();
   }
 
+  @override
+  void dispose() {
+    _debounceTimer?.cancel();
+    super.dispose();
+  }
+
+  String _buildWhereClause() {
+    final activeFilters = _filters.where((f) {
+      if (f.operator == 'is_null' || f.operator == 'is_not_null') return true;
+      return f.value.isNotEmpty;
+    }).toList();
+
+    if (activeFilters.isEmpty) return '';
+    final conditions = activeFilters.map((f) => f.toSql()).toList();
+    return ' WHERE ${conditions.join(' AND ')}';
+  }
+
+  void _onFiltersUpdated({bool debounce = false}) {
+    setState(() {
+      _currentPage = 0;
+      _isLoadingCount = true;
+    });
+    
+    if (debounce) {
+      _debounceTimer?.cancel();
+      _debounceTimer = Timer(const Duration(milliseconds: 350), () {
+        if (mounted) {
+          _fetchCount();
+          _fetchData();
+        }
+      });
+    } else {
+      _debounceTimer?.cancel();
+      _fetchCount();
+      _fetchData();
+    }
+  }
+
   Future<void> _fetchCount() async {
     try {
+      final whereClause = _buildWhereClause();
       final res = await runMysqlQuery(
         url: widget.connectionUrl,
         database: widget.databaseName,
-        query: 'SELECT COUNT(*) FROM `${widget.tableName}`',
+        query: 'SELECT COUNT(*) FROM `${widget.tableName}`$whereClause',
       );
       if (mounted && res.rows.isNotEmpty && res.rows[0].isNotEmpty) {
         setState(() {
@@ -71,10 +117,11 @@ class TableDataViewState extends State<TableDataView> {
 
     try {
       final offset = _currentPage * _pageSize;
+      final whereClause = _buildWhereClause();
       final result = await runMysqlQuery(
         url: widget.connectionUrl,
         database: widget.databaseName,
-        query: 'SELECT * FROM `${widget.tableName}` LIMIT $_pageSize OFFSET $offset',
+        query: 'SELECT * FROM `${widget.tableName}`$whereClause LIMIT $_pageSize OFFSET $offset',
       );
       if (mounted) {
         setState(() {
@@ -559,6 +606,64 @@ class TableDataViewState extends State<TableDataView> {
                     Container(width: 1, height: 16, color: const Color(0xFFE8E5DF)),
                     const SizedBox(width: 8),
                   ],
+                  // Filter toggle — stable width using Stack badge, never shifts
+                  GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _showFilterBar = !_showFilterBar;
+                      });
+                    },
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.filter_alt_outlined,
+                                size: 14,
+                                color: _filters.isNotEmpty ? const Color(0xFF7F0019) : const Color(0xFF73726F),
+                              ),
+                              const SizedBox(width: 4),
+                              const Text(
+                                "FILTER",
+                                style: TextStyle(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF73726F),
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (_filters.isNotEmpty)
+                          Positioned(
+                            top: -2,
+                            right: -2,
+                            child: Container(
+                              width: 14,
+                              height: 14,
+                              decoration: const BoxDecoration(
+                                color: Color(0xFF7F0019), // Muji Red
+                                shape: BoxShape.circle,
+                              ),
+                              child: Center(
+                                child: Text(
+                                  '${_filters.length}',
+                                  style: const TextStyle(fontSize: 8, color: Colors.white, fontWeight: FontWeight.w700),
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(width: 1, height: 16, color: const Color(0xFFE8E5DF)),
+                  const SizedBox(width: 8),
                   IconButton(
                     icon: const Icon(Icons.add, size: 16, color: Color(0xFF73726F)),
                     onPressed: _addNewRow,
@@ -587,6 +692,11 @@ class TableDataViewState extends State<TableDataView> {
                   ),
                 ],
               ),
+            ),
+            AnimatedSize(
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeInOut,
+              child: _showFilterBar ? _buildFilterBar(data.columns) : const SizedBox.shrink(),
             ),
             Expanded(
               child: _isLoading 
@@ -636,6 +746,292 @@ class TableDataViewState extends State<TableDataView> {
             _buildPaginationControls(),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildFilterBar(List<String> columns) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      decoration: const BoxDecoration(
+        color: Color(0xFFF3EFE9), // Kraft Sand backdrop
+        border: Border(bottom: BorderSide(color: Color(0xFFE8E5DF), width: 0.5)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Section header row — always present
+          Row(
+            children: [
+              const Text(
+                "FILTER RULES",
+                style: TextStyle(
+                  fontSize: 9,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF73726F),
+                  letterSpacing: 1.0,
+                ),
+              ),
+              const Spacer(),
+              if (_filters.isNotEmpty)
+                // CLEAR ALL: visually delineated, not inline with section title
+                OutlinedButton(
+                  onPressed: () {
+                    setState(() => _filters.clear());
+                    _onFiltersUpdated(debounce: false);
+                  },
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFFAC6B62),
+                    side: const BorderSide(color: Color(0xFFAC6B62), width: 0.5),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(2)),
+                  ),
+                  child: const Text(
+                    "CLEAR ALL",
+                    style: TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          // Filter rows — only shown when there are filters
+          if (_filters.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: _filters.length,
+              separatorBuilder: (context, index) => const SizedBox(height: 6),
+              itemBuilder: (context, index) {
+                final filter = _filters[index];
+                return Row(
+                  children: [
+                    // SQL keyword label — fixed width for alignment
+                    SizedBox(
+                      width: 44,
+                      child: Text(
+                        index == 0 ? "WHERE" : "AND",
+                        style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF73726F),
+                          fontFamily: 'monospace',
+                        ),
+                      ),
+                    ),
+                    // Column selector
+                    _buildColumnDropdown(filter, columns),
+                    const SizedBox(width: 6),
+                    // Operator selector
+                    _buildOperatorDropdown(filter),
+                    const SizedBox(width: 6),
+                    // Value input — flex-expanded so it fills remaining space gracefully
+                    if (filter.operator != 'is_null' && filter.operator != 'is_not_null')
+                      Expanded(
+                        child: _FilterValueInput(
+                          key: ValueKey(filter),
+                          filter: filter,
+                          onChanged: (val) {
+                            filter.value = val;
+                            _onFiltersUpdated(debounce: true);
+                          },
+                        ),
+                      )
+                    else
+                      const Spacer(),
+                    const SizedBox(width: 6),
+                    // Remove filter — always at far right
+                    IconButton(
+                      icon: const Icon(Icons.close, size: 14, color: Color(0xFF73726F)),
+                      hoverColor: const Color(0xFFFAF8F5),
+                      onPressed: () {
+                        setState(() => _filters.removeAt(index));
+                        _onFiltersUpdated(debounce: false);
+                      },
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      splashRadius: 16,
+                      tooltip: "Remove rule",
+                    ),
+                  ],
+                );
+              },
+            ),
+          ],
+          // ADD FILTER button — always at the bottom in the same position
+          const SizedBox(height: 8),
+          _buildAddFilterButton(columns),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildColumnDropdown(TableFilter filter, List<String> columns) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: const Color(0xFFE8E5DF), width: 0.5),
+        borderRadius: BorderRadius.circular(2),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: columns.contains(filter.columnName) ? filter.columnName : columns.first,
+          items: columns.map((col) => DropdownMenuItem(
+            value: col,
+            child: Text(
+              col, 
+              style: const TextStyle(fontSize: 11, fontFamily: 'monospace', color: Color(0xFF2D2D2D)),
+            ),
+          )).toList(),
+          onChanged: (val) {
+            if (val != null) {
+              setState(() {
+                filter.columnName = val;
+              });
+              _onFiltersUpdated(debounce: false);
+            }
+          },
+          style: const TextStyle(fontSize: 11, color: Color(0xFF2D2D2D)),
+          dropdownColor: const Color(0xFFFAF8F5),
+          icon: const Icon(Icons.arrow_drop_down, size: 14, color: Color(0xFF73726F)),
+          isDense: true,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOperatorDropdown(TableFilter filter) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: const Color(0xFFE8E5DF), width: 0.5),
+        borderRadius: BorderRadius.circular(2),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: filter.operator,
+          items: TableFilter.operators.map((op) => DropdownMenuItem(
+            value: op['value'],
+            child: Text(
+              op['label']!, 
+              style: const TextStyle(fontSize: 11, color: Color(0xFF2D2D2D)),
+            ),
+          )).toList(),
+          onChanged: (val) {
+            if (val != null) {
+              setState(() {
+                filter.operator = val;
+              });
+              _onFiltersUpdated(debounce: false);
+            }
+          },
+          dropdownColor: const Color(0xFFFAF8F5),
+          icon: const Icon(Icons.arrow_drop_down, size: 14, color: Color(0xFF73726F)),
+          isDense: true,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAddFilterButton(List<String> columns) {
+    return OutlinedButton.icon(
+      onPressed: () {
+        if (columns.isNotEmpty) {
+          setState(() {
+            _filters.add(TableFilter(
+              columnName: columns.first,
+              operator: 'contains',
+              value: '',
+            ));
+          });
+        }
+      },
+      icon: const Icon(Icons.add, size: 10, color: Color(0xFF2D2D2D)),
+      label: const Text(
+        "ADD FILTER",
+        style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: Color(0xFF2D2D2D), letterSpacing: 0.5),
+      ),
+      style: OutlinedButton.styleFrom(
+        backgroundColor: Colors.white,
+        side: const BorderSide(color: Color(0xFFE8E5DF), width: 0.5),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(2)),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        minimumSize: Size.zero,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+    );
+  }
+}
+
+class _FilterValueInput extends StatefulWidget {
+  final TableFilter filter;
+  final ValueChanged<String> onChanged;
+
+  const _FilterValueInput({
+    super.key,
+    required this.filter,
+    required this.onChanged,
+  });
+
+  @override
+  State<_FilterValueInput> createState() => _FilterValueInputState();
+}
+
+class _FilterValueInputState extends State<_FilterValueInput> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.filter.value);
+  }
+
+  @override
+  void didUpdateWidget(covariant _FilterValueInput oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.filter != widget.filter) {
+      _controller.text = widget.filter.value;
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 180,
+      height: 28,
+      child: TextField(
+        controller: _controller,
+        style: const TextStyle(fontSize: 11, color: Color(0xFF2D2D2D), fontFamily: 'monospace'),
+        decoration: const InputDecoration(
+          hintText: "Value...",
+          hintStyle: TextStyle(fontSize: 10, color: Color(0xFFC4C2BC)),
+          fillColor: Colors.white,
+          filled: true,
+          isDense: true,
+          contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          enabledBorder: OutlineInputBorder(
+            borderSide: BorderSide(color: Color(0xFFE8E5DF), width: 0.5),
+            borderRadius: BorderRadius.all(Radius.circular(2)),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderSide: BorderSide(color: Color(0xFF7F0019), width: 1.0),
+            borderRadius: BorderRadius.all(Radius.circular(2)),
+          ),
+        ),
+        onChanged: widget.onChanged,
       ),
     );
   }

@@ -80,8 +80,22 @@ class _CreateConnectionPageState extends State<CreateConnectionPage> {
   Widget build(BuildContext context) {
     final isEdit = widget.connectionToEdit != null;
     return Scaffold(
+      backgroundColor: const Color(0xFFFAF8F5), // Washi Cream Canvas
       appBar: AppBar(
-        title: Text(isEdit ? "EDIT CONNECTION" : "NEW CONNECTION"),
+        backgroundColor: const Color(0xFFFAF8F5),
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Color(0xFF2D2D2D)), // Sumi Ink back button
+        shape: const Border(bottom: BorderSide(color: Color(0xFFE8E5DF), width: 0.5)), // Divider Clay
+        title: Text(
+          isEdit ? "EDIT CONNECTION" : "NEW CONNECTION",
+          style: const TextStyle(
+            fontFamily: 'monospace',
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF2D2D2D), // Sumi Ink
+            letterSpacing: 1.0,
+          ),
+        ),
       ),
       body: Center(
         child: SingleChildScrollView(
