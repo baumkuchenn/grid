@@ -446,3 +446,4 @@ class _CloneTableDialogState extends State<_CloneTableDialog> {
       ),
     );
   }
+}
