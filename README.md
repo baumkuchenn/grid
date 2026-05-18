@@ -6,7 +6,7 @@ By leveraging Rust for the native core engine layer (`sqlx`) and Flutter Desktop
 
 <p align="center">
   <img src="assets/connections.png" width="48%" alt="Grid Connections Page" />
-  <img src="assets/workspace.png" width="48%" alt="Grid Workspace Page" />
+  <img src="assets/workspaces.png" width="48%" alt="Grid Workspace Page" />
 </p>
 
 ---
