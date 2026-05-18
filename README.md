@@ -9,7 +9,13 @@ By leveraging Rust for the native core engine layer (`sqlx`) and Flutter Desktop
   <img src="assets/workspaces.png" width="48%" alt="Grid Workspace Page" />
 </p>
 
----
+
+## ⚠️ Security Advisory & Disclaimer
+
+Grid is currently in active development. **Connection parameters, credentials, and network data streams are not yet fully optimized for production-grade security.** - **Intended Use:** This utility is primarily built and tested for running queries against local development environments (`localhost` / `127.0.0.1`).
+- **Risk Notice:** Connecting this client to remote, exposed, or production databases over public networks is done entirely **at your own risk**. 
+- **Future Roadmap:** End-to-end credential encryption, secure native keychain storage, and SSH tunneling integrations are planned for future optimization cycles.
+
 
 ## Features
 
@@ -18,7 +24,6 @@ By leveraging Rust for the native core engine layer (`sqlx`) and Flutter Desktop
 - **Efficient Memory Footprint**: Uses advanced native bridging to pass data arrays between the Rust core and Dart UI layer with minimal runtime overhead.
 - **Cross-Platform Foundation**: Compiles directly to native machine code on macOS, Windows, and Linux without bundling a heavy browser engine in the background.
 
----
 
 ## Architecture
 
@@ -33,8 +38,7 @@ The application splits computational and presentation responsibilities to maximi
 ```
 - **Frontend:** Flutter Desktop handles the window rendering, component layouts, and event tracking. It remains completely decoupled from database logic, operating as a presentation layer that requests data and renders the incoming results.
 - **Backend:** Rust manages connection lifecycles, connection pooling, raw data manipulation, and direct socket communications with your target database servers.
-
----
+  
 
 ## Technical Prerequisites
 
@@ -61,7 +65,6 @@ rustup target add x86_64-apple-darwin
 rustup target add x86_64-pc-windows-msvc
 ```
 
----
 
 ## Development Setup
 
@@ -97,7 +100,6 @@ For Windows:
 fvm flutter run -d windows
 ```
 
----
 
 ## Project Configuration
 
@@ -116,7 +118,6 @@ Modifies the Win32 ShowWindow function parameter flags to pass SW_MAXIMIZE direc
 - To change the window identity title or internal application package headers on macOS, alter the configurations directly inside macos/Runner/Configs/AppInfo.xcconfig.
 - Application launcher icons are centrally compiled using the asset tool declaration block located inside the root pubspec.yaml sheet.
 
----
 
 ## License
 Distributed under the MIT License. Designed and developed with utility, intention, and care.
