@@ -19,62 +19,59 @@ class SqlTextEditingController extends TextEditingController {
     final text = this.text;
 
     int lastIndex = 0;
-    
+
     _sqlRegex.allMatches(text).forEach((match) {
       if (match.start > lastIndex) {
-        children.add(TextSpan(
-          text: text.substring(lastIndex, match.start),
-          style: style,
-        ));
+        children.add(
+          TextSpan(text: text.substring(lastIndex, match.start), style: style),
+        );
       }
-      
+
       final String matchText = text.substring(match.start, match.end);
-      
+
       if (match.group(1) != null) {
-        children.add(TextSpan(
-          text: matchText,
-          style: style?.copyWith(
-            color: const Color(0xFF4A4A4A),
-            fontWeight: FontWeight.w700,
+        children.add(
+          TextSpan(
+            text: matchText,
+            style: style?.copyWith(
+              color: const Color(0xFF4A4A4A),
+              fontWeight: FontWeight.w700,
+            ),
           ),
-        ));
+        );
       } else if (match.group(2) != null) {
-        children.add(TextSpan(
-          text: matchText,
-          style: style?.copyWith(
-            color: const Color(0xFF5D7A68),
+        children.add(
+          TextSpan(
+            text: matchText,
+            style: style?.copyWith(color: const Color(0xFF5D7A68)),
           ),
-        ));
+        );
       } else if (match.group(3) != null) {
-        children.add(TextSpan(
-          text: matchText,
-          style: style?.copyWith(
-            color: const Color(0xFFB88B5C),
+        children.add(
+          TextSpan(
+            text: matchText,
+            style: style?.copyWith(color: const Color(0xFFB88B5C)),
           ),
-        ));
+        );
       } else if (match.group(4) != null) {
-        children.add(TextSpan(
-          text: matchText,
-          style: style?.copyWith(
-            color: const Color(0xFFCCCCCC),
-            fontStyle: FontStyle.italic,
+        children.add(
+          TextSpan(
+            text: matchText,
+            style: style?.copyWith(
+              color: const Color(0xFFCCCCCC),
+              fontStyle: FontStyle.italic,
+            ),
           ),
-        ));
+        );
       } else {
-        children.add(TextSpan(
-          text: matchText,
-          style: style,
-        ));
+        children.add(TextSpan(text: matchText, style: style));
       }
-      
+
       lastIndex = match.end;
     });
 
     if (lastIndex < text.length) {
-      children.add(TextSpan(
-        text: text.substring(lastIndex),
-        style: style,
-      ));
+      children.add(TextSpan(text: text.substring(lastIndex), style: style));
     }
 
     return TextSpan(style: style, children: children);

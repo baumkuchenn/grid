@@ -22,12 +22,17 @@ class MujiTheme {
         surface: Colors.white,
         error: terracotta,
       ),
-      
+
       // Clean Typography
       textTheme: const TextTheme(
         bodyLarge: TextStyle(color: sumiInk, fontSize: 14, letterSpacing: 0.2),
         bodyMedium: TextStyle(color: sumiInk, fontSize: 13, letterSpacing: 0.2),
-        labelLarge: TextStyle(color: woodAsh, fontSize: 12, fontWeight: FontWeight.w600, letterSpacing: 0.8),
+        labelLarge: TextStyle(
+          color: woodAsh,
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.8,
+        ),
       ),
 
       // Minimalist AppBar
@@ -62,7 +67,10 @@ class MujiTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(4),
           borderSide: const BorderSide(color: dividerClay, width: 0.5),
@@ -85,11 +93,13 @@ class MujiTheme {
           backgroundColor: mujiRed,
           foregroundColor: Colors.white,
           elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(4),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, letterSpacing: 0.5),
+          textStyle: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.5,
+          ),
         ),
       ),
 
@@ -109,9 +119,7 @@ class MujiTheme {
         elevation: 1,
       ),
 
-      iconTheme: const IconThemeData(
-        color: woodAsh,
-      ),
+      iconTheme: const IconThemeData(color: woodAsh),
     );
   }
 }

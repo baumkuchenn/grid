@@ -6,7 +6,7 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `decode_mysql_cell`
+// These functions are ignored because they are not marked as `pub`: `collect_query_result`, `decode_mysql_cell`, `decode_mysql_row`, `get_or_create_pool`, `mysql_url`, `pool_cache`
 
 String greet({required String name}) =>
     RustLib.instance.api.crateApiSimpleGreet(name: name);
@@ -14,16 +14,8 @@ String greet({required String name}) =>
 Future<bool> testMysqlConnection({required String url}) =>
     RustLib.instance.api.crateApiSimpleTestMysqlConnection(url: url);
 
-Future<List<String>> getMysqlDatabases({required String url}) =>
-    RustLib.instance.api.crateApiSimpleGetMysqlDatabases(url: url);
-
-Future<List<String>> getMysqlTables({
-  required String url,
-  required String database,
-}) => RustLib.instance.api.crateApiSimpleGetMysqlTables(
-  url: url,
-  database: database,
-);
+Future<SchemaOverview> getMysqlSchemaOverview({required String url}) =>
+    RustLib.instance.api.crateApiSimpleGetMysqlSchemaOverview(url: url);
 
 Future<QueryResult> runMysqlQuery({
   required String url,
@@ -35,14 +27,16 @@ Future<QueryResult> runMysqlQuery({
   query: query,
 );
 
-Future<QueryResult> getMysqlTableData({
+Future<TablePageResult> runMysqlTablePage({
   required String url,
   required String database,
-  required String table,
-}) => RustLib.instance.api.crateApiSimpleGetMysqlTableData(
+  required String dataQuery,
+  required String countQuery,
+}) => RustLib.instance.api.crateApiSimpleRunMysqlTablePage(
   url: url,
   database: database,
-  table: table,
+  dataQuery: dataQuery,
+  countQuery: countQuery,
 );
 
 Future<void> executeMysqlAction({
@@ -56,6 +50,24 @@ Future<void> executeMysqlAction({
   query: query,
   disableFk: disableFk,
 );
+
+class DatabaseSchema {
+  final String name;
+  final List<String> tables;
+
+  const DatabaseSchema({required this.name, required this.tables});
+
+  @override
+  int get hashCode => name.hashCode ^ tables.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is DatabaseSchema &&
+          runtimeType == other.runtimeType &&
+          name == other.name &&
+          tables == other.tables;
+}
 
 class QueryResult {
   final List<String> columns;
@@ -73,4 +85,38 @@ class QueryResult {
           runtimeType == other.runtimeType &&
           columns == other.columns &&
           rows == other.rows;
+}
+
+class SchemaOverview {
+  final List<DatabaseSchema> databases;
+
+  const SchemaOverview({required this.databases});
+
+  @override
+  int get hashCode => databases.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is SchemaOverview &&
+          runtimeType == other.runtimeType &&
+          databases == other.databases;
+}
+
+class TablePageResult {
+  final QueryResult result;
+  final PlatformInt64 totalRows;
+
+  const TablePageResult({required this.result, required this.totalRows});
+
+  @override
+  int get hashCode => result.hashCode ^ totalRows.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is TablePageResult &&
+          runtimeType == other.runtimeType &&
+          result == other.result &&
+          totalRows == other.totalRows;
 }

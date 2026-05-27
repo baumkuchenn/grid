@@ -1,49 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../rust/api/simple.dart';
+import 'data_grid_view.dart';
+
 class WashiLedgerDialog extends StatelessWidget {
   final List<String> columns;
   final List<List<String>> rows;
   final String title;
 
-  // Pre-computed rendering lists to avoid redundant calculation during builds/rebuilds
-  final List<DataColumn> _computedColumns;
-  final List<DataRow> _computedRows;
+  // The preview stays capped for responsiveness; copy/export still uses all rows.
+  final QueryResult _previewResult;
 
   WashiLedgerDialog({
     super.key,
     required this.columns,
     required this.rows,
     required this.title,
-  })  : _computedColumns = columns.map((col) {
-          return DataColumn(
-            label: Text(
-              col,
-              style: const TextStyle(
-                fontFamily: 'monospace',
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFF73726F),
-              ),
-            ),
-          );
-        }).toList(),
-        _computedRows = rows.take(150).map((row) {
-          return DataRow(
-            cells: row.map((cell) {
-              return DataCell(
-                Text(
-                  cell,
-                  style: const TextStyle(
-                    fontFamily: 'Georgia',
-                    fontSize: 12,
-                    color: Color(0xFF2D2D2D),
-                  ),
-                ),
-              );
-            }).toList(),
-          );
-        }).toList();
+  }) : _previewResult = QueryResult(
+         columns: columns,
+         rows: rows.take(150).toList(),
+       );
 
   static Future<void> show({
     required BuildContext context,
@@ -53,17 +30,14 @@ class WashiLedgerDialog extends StatelessWidget {
   }) async {
     return showDialog(
       context: context,
-      builder: (context) => WashiLedgerDialog(
-        columns: columns,
-        rows: rows,
-        title: title,
-      ),
+      builder: (context) =>
+          WashiLedgerDialog(columns: columns, rows: rows, title: title),
     );
   }
 
   String _generateCsv() {
     final buffer = StringBuffer();
-    
+
     // Header
     for (int i = 0; i < columns.length; i++) {
       if (i > 0) buffer.write(',');
@@ -72,7 +46,7 @@ class WashiLedgerDialog extends StatelessWidget {
       buffer.write('"');
     }
     buffer.writeln();
-    
+
     // Rows
     for (final row in rows) {
       for (int i = 0; i < row.length; i++) {
@@ -88,7 +62,7 @@ class WashiLedgerDialog extends StatelessWidget {
 
   String _generateMarkdown() {
     final buffer = StringBuffer();
-    
+
     // Header
     buffer.write('| ');
     for (int i = 0; i < columns.length; i++) {
@@ -96,7 +70,7 @@ class WashiLedgerDialog extends StatelessWidget {
       buffer.write(columns[i]);
     }
     buffer.writeln(' |');
-    
+
     // Divider
     buffer.write('| ');
     for (int i = 0; i < columns.length; i++) {
@@ -104,7 +78,7 @@ class WashiLedgerDialog extends StatelessWidget {
       buffer.write('---');
     }
     buffer.writeln(' |');
-    
+
     // Rows
     for (final row in rows) {
       buffer.write('| ');
@@ -127,7 +101,11 @@ class WashiLedgerDialog extends StatelessWidget {
             const SizedBox(width: 8),
             Text(
               "Copied successfully as $formatName!",
-              style: const TextStyle(fontSize: 13, color: Color(0xFFFAF8F5), letterSpacing: 0.5),
+              style: const TextStyle(
+                fontSize: 13,
+                color: Color(0xFFFAF8F5),
+                letterSpacing: 0.5,
+              ),
             ),
           ],
         ),
@@ -170,7 +148,11 @@ class WashiLedgerDialog extends StatelessWidget {
                   const SizedBox(height: 12),
                   Row(
                     children: [
-                      const Icon(Icons.menu_book, size: 18, color: Color(0xFF73726F)),
+                      const Icon(
+                        Icons.menu_book,
+                        size: 18,
+                        color: Color(0xFF73726F),
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
@@ -199,50 +181,30 @@ class WashiLedgerDialog extends StatelessWidget {
                   const SizedBox(height: 16),
                   const Divider(height: 1, color: Color(0xFFE8E5DF)),
                   const SizedBox(height: 16),
-                  
+
                   // Scrollable Lined Paper Ledger
                   Expanded(
                     child: Container(
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        border: Border.all(color: const Color(0xFFE8E5DF), width: 0.5),
+                        border: Border.all(
+                          color: const Color(0xFFE8E5DF),
+                          width: 0.5,
+                        ),
                         borderRadius: BorderRadius.circular(2),
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(2),
-                        child: Scrollbar(
-                          thumbVisibility: true,
-                          child: SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            child: SingleChildScrollView(
-                              scrollDirection: Axis.vertical,
-                              child: DataTable(
-                                headingRowColor: WidgetStateProperty.all(const Color(0xFFF3EFE9)),
-                                dataRowMinHeight: 34,
-                                dataRowMaxHeight: 34,
-                                headingRowHeight: 36,
-                                horizontalMargin: 16,
-                                columnSpacing: 24,
-                                dividerThickness: 0.5,
-                                border: const TableBorder(
-                                  verticalInside: BorderSide(color: Color(0xFFE8E5DF), width: 0.5),
-                                  horizontalInside: BorderSide(color: Color(0xFFE8E5DF), width: 0.5),
-                                ),
-                                columns: _computedColumns,
-                                rows: _computedRows,
-                              ),
-                            ),
-                          ),
-                        ),
+                        child: buildDataGrid(context, _previewResult),
                       ),
                     ),
                   ),
                 ],
               ),
             ),
-            
+
             const SizedBox(width: 24),
-            
+
             // Right Side: The Muji Tag/Receipt Metadata Card
             Container(
               width: 240,
@@ -289,24 +251,38 @@ class WashiLedgerDialog extends StatelessWidget {
                   const SizedBox(height: 20),
                   const Divider(height: 1, color: Color(0xFFE8E5DF)),
                   const SizedBox(height: 16),
-                  
-                  _buildTagRow("LEDGER ID", title.toLowerCase().hashCode.abs().toString().substring(0, 8)),
+
+                  _buildTagRow(
+                    "LEDGER ID",
+                    title.toLowerCase().hashCode.abs().toString().substring(
+                      0,
+                      8,
+                    ),
+                  ),
                   _buildTagRow("RECORD DATE", dateString),
                   _buildTagRow("RECORD TIME", timeString),
                   _buildTagRow("TOTAL ROWS", "${rows.length} LINES"),
                   _buildTagRow("COLUMNS", "${columns.length} VALS"),
-                  
+
                   const Spacer(),
                   const Divider(height: 1, color: Color(0xFFE8E5DF)),
                   const SizedBox(height: 20),
-                  
+
                   // Copy Actions
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
-                      onPressed: () => _copyToClipboard(context, _generateCsv(), "CSV"),
-                      icon: const Icon(Icons.copy, size: 14, color: Colors.white),
-                      label: const Text("COPY CSV", style: TextStyle(fontSize: 11)),
+                      onPressed: () =>
+                          _copyToClipboard(context, _generateCsv(), "CSV"),
+                      icon: const Icon(
+                        Icons.copy,
+                        size: 14,
+                        color: Colors.white,
+                      ),
+                      label: const Text(
+                        "COPY CSV",
+                        style: TextStyle(fontSize: 11),
+                      ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF7F0019), // Muji Red
                         padding: const EdgeInsets.symmetric(vertical: 12),
@@ -317,15 +293,33 @@ class WashiLedgerDialog extends StatelessWidget {
                   SizedBox(
                     width: double.infinity,
                     child: OutlinedButton.icon(
-                      onPressed: () => _copyToClipboard(context, _generateMarkdown(), "Markdown Table"),
-                      icon: const Icon(Icons.table_rows_outlined, size: 14, color: Color(0xFF2D2D2D)),
+                      onPressed: () => _copyToClipboard(
+                        context,
+                        _generateMarkdown(),
+                        "Markdown Table",
+                      ),
+                      icon: const Icon(
+                        Icons.table_rows_outlined,
+                        size: 14,
+                        color: Color(0xFF2D2D2D),
+                      ),
                       label: const Text(
                         "COPY MARKDOWN",
-                        style: TextStyle(fontSize: 11, color: Color(0xFF2D2D2D), fontWeight: FontWeight.w600, letterSpacing: 0.5),
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Color(0xFF2D2D2D),
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.5,
+                        ),
                       ),
                       style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: Color(0xFF73726F), width: 0.8),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                        side: const BorderSide(
+                          color: Color(0xFF73726F),
+                          width: 0.8,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(4),
+                        ),
                         padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
                     ),
@@ -337,7 +331,12 @@ class WashiLedgerDialog extends StatelessWidget {
                       onPressed: () => Navigator.pop(context),
                       child: const Text(
                         "DONE",
-                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.0, color: Color(0xFF73726F)),
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1.0,
+                          color: Color(0xFF73726F),
+                        ),
                       ),
                     ),
                   ),
@@ -356,22 +355,32 @@ class WashiLedgerDialog extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 9,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF73726F),
-              letterSpacing: 0.5,
+          Flexible(
+            child: Text(
+              label,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 9,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF73726F),
+                letterSpacing: 0.5,
+              ),
             ),
           ),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 11,
-              fontFamily: 'monospace',
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF2D2D2D),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: Text(
+                value,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontFamily: 'monospace',
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF2D2D2D),
+                ),
+              ),
             ),
           ),
         ],

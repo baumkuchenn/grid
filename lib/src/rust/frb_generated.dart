@@ -66,7 +66,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.12.0';
 
   @override
-  int get rustContentHash => -1625887089;
+  int get rustContentHash => -224430468;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -85,17 +85,8 @@ abstract class RustLibApi extends BaseApi {
     required bool disableFk,
   });
 
-  Future<List<String>> crateApiSimpleGetMysqlDatabases({required String url});
-
-  Future<QueryResult> crateApiSimpleGetMysqlTableData({
+  Future<SchemaOverview> crateApiSimpleGetMysqlSchemaOverview({
     required String url,
-    required String database,
-    required String table,
-  });
-
-  Future<List<String>> crateApiSimpleGetMysqlTables({
-    required String url,
-    required String database,
   });
 
   String crateApiSimpleGreet({required String name});
@@ -106,6 +97,13 @@ abstract class RustLibApi extends BaseApi {
     required String url,
     required String database,
     required String query,
+  });
+
+  Future<TablePageResult> crateApiSimpleRunMysqlTablePage({
+    required String url,
+    required String database,
+    required String dataQuery,
+    required String countQuery,
   });
 
   Future<bool> crateApiSimpleTestMysqlConnection({required String url});
@@ -159,7 +157,9 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Future<List<String>> crateApiSimpleGetMysqlDatabases({required String url}) {
+  Future<SchemaOverview> crateApiSimpleGetMysqlSchemaOverview({
+    required String url,
+  }) {
     return handler.executeNormal(
       NormalTask(
         callFfi: (port_) {
@@ -173,89 +173,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           );
         },
         codec: SseCodec(
-          decodeSuccessData: sse_decode_list_String,
+          decodeSuccessData: sse_decode_schema_overview,
           decodeErrorData: sse_decode_AnyhowException,
         ),
-        constMeta: kCrateApiSimpleGetMysqlDatabasesConstMeta,
+        constMeta: kCrateApiSimpleGetMysqlSchemaOverviewConstMeta,
         argValues: [url],
         apiImpl: this,
       ),
     );
   }
 
-  TaskConstMeta get kCrateApiSimpleGetMysqlDatabasesConstMeta =>
-      const TaskConstMeta(debugName: "get_mysql_databases", argNames: ["url"]);
-
-  @override
-  Future<QueryResult> crateApiSimpleGetMysqlTableData({
-    required String url,
-    required String database,
-    required String table,
-  }) {
-    return handler.executeNormal(
-      NormalTask(
-        callFfi: (port_) {
-          final serializer = SseSerializer(generalizedFrbRustBinding);
-          sse_encode_String(url, serializer);
-          sse_encode_String(database, serializer);
-          sse_encode_String(table, serializer);
-          pdeCallFfi(
-            generalizedFrbRustBinding,
-            serializer,
-            funcId: 3,
-            port: port_,
-          );
-        },
-        codec: SseCodec(
-          decodeSuccessData: sse_decode_query_result,
-          decodeErrorData: sse_decode_AnyhowException,
-        ),
-        constMeta: kCrateApiSimpleGetMysqlTableDataConstMeta,
-        argValues: [url, database, table],
-        apiImpl: this,
-      ),
-    );
-  }
-
-  TaskConstMeta get kCrateApiSimpleGetMysqlTableDataConstMeta =>
+  TaskConstMeta get kCrateApiSimpleGetMysqlSchemaOverviewConstMeta =>
       const TaskConstMeta(
-        debugName: "get_mysql_table_data",
-        argNames: ["url", "database", "table"],
-      );
-
-  @override
-  Future<List<String>> crateApiSimpleGetMysqlTables({
-    required String url,
-    required String database,
-  }) {
-    return handler.executeNormal(
-      NormalTask(
-        callFfi: (port_) {
-          final serializer = SseSerializer(generalizedFrbRustBinding);
-          sse_encode_String(url, serializer);
-          sse_encode_String(database, serializer);
-          pdeCallFfi(
-            generalizedFrbRustBinding,
-            serializer,
-            funcId: 4,
-            port: port_,
-          );
-        },
-        codec: SseCodec(
-          decodeSuccessData: sse_decode_list_String,
-          decodeErrorData: sse_decode_AnyhowException,
-        ),
-        constMeta: kCrateApiSimpleGetMysqlTablesConstMeta,
-        argValues: [url, database],
-        apiImpl: this,
-      ),
-    );
-  }
-
-  TaskConstMeta get kCrateApiSimpleGetMysqlTablesConstMeta =>
-      const TaskConstMeta(
-        debugName: "get_mysql_tables",
-        argNames: ["url", "database"],
+        debugName: "get_mysql_schema_overview",
+        argNames: ["url"],
       );
 
   @override
@@ -265,7 +196,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(name, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 5)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 3)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -290,7 +221,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 6,
+            funcId: 4,
             port: port_,
           );
         },
@@ -324,7 +255,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 7,
+            funcId: 5,
             port: port_,
           );
         },
@@ -346,6 +277,45 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<TablePageResult> crateApiSimpleRunMysqlTablePage({
+    required String url,
+    required String database,
+    required String dataQuery,
+    required String countQuery,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(url, serializer);
+          sse_encode_String(database, serializer);
+          sse_encode_String(dataQuery, serializer);
+          sse_encode_String(countQuery, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 6,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_table_page_result,
+          decodeErrorData: sse_decode_AnyhowException,
+        ),
+        constMeta: kCrateApiSimpleRunMysqlTablePageConstMeta,
+        argValues: [url, database, dataQuery, countQuery],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSimpleRunMysqlTablePageConstMeta =>
+      const TaskConstMeta(
+        debugName: "run_mysql_table_page",
+        argNames: ["url", "database", "dataQuery", "countQuery"],
+      );
+
+  @override
   Future<bool> crateApiSimpleTestMysqlConnection({required String url}) {
     return handler.executeNormal(
       NormalTask(
@@ -355,7 +325,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 8,
+            funcId: 7,
             port: port_,
           );
         },
@@ -395,9 +365,33 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  DatabaseSchema dco_decode_database_schema(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return DatabaseSchema(
+      name: dco_decode_String(arr[0]),
+      tables: dco_decode_list_String(arr[1]),
+    );
+  }
+
+  @protected
+  PlatformInt64 dco_decode_i_64(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dcoDecodeI64(raw);
+  }
+
+  @protected
   List<String> dco_decode_list_String(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_String).toList();
+  }
+
+  @protected
+  List<DatabaseSchema> dco_decode_list_database_schema(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_database_schema).toList();
   }
 
   @protected
@@ -421,6 +415,27 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     return QueryResult(
       columns: dco_decode_list_String(arr[0]),
       rows: dco_decode_list_list_String(arr[1]),
+    );
+  }
+
+  @protected
+  SchemaOverview dco_decode_schema_overview(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 1)
+      throw Exception('unexpected arr length: expect 1 but see ${arr.length}');
+    return SchemaOverview(databases: dco_decode_list_database_schema(arr[0]));
+  }
+
+  @protected
+  TablePageResult dco_decode_table_page_result(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return TablePageResult(
+      result: dco_decode_query_result(arr[0]),
+      totalRows: dco_decode_i_64(arr[1]),
     );
   }
 
@@ -457,6 +472,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  DatabaseSchema sse_decode_database_schema(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_name = sse_decode_String(deserializer);
+    var var_tables = sse_decode_list_String(deserializer);
+    return DatabaseSchema(name: var_name, tables: var_tables);
+  }
+
+  @protected
+  PlatformInt64 sse_decode_i_64(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getPlatformInt64();
+  }
+
+  @protected
   List<String> sse_decode_list_String(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
 
@@ -464,6 +493,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var ans_ = <String>[];
     for (var idx_ = 0; idx_ < len_; ++idx_) {
       ans_.add(sse_decode_String(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<DatabaseSchema> sse_decode_list_database_schema(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <DatabaseSchema>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_database_schema(deserializer));
     }
     return ans_;
   }
@@ -493,6 +536,21 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_columns = sse_decode_list_String(deserializer);
     var var_rows = sse_decode_list_list_String(deserializer);
     return QueryResult(columns: var_columns, rows: var_rows);
+  }
+
+  @protected
+  SchemaOverview sse_decode_schema_overview(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_databases = sse_decode_list_database_schema(deserializer);
+    return SchemaOverview(databases: var_databases);
+  }
+
+  @protected
+  TablePageResult sse_decode_table_page_result(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_result = sse_decode_query_result(deserializer);
+    var var_totalRows = sse_decode_i_64(deserializer);
+    return TablePageResult(result: var_result, totalRows: var_totalRows);
   }
 
   @protected
@@ -534,11 +592,39 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_database_schema(
+    DatabaseSchema self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.name, serializer);
+    sse_encode_list_String(self.tables, serializer);
+  }
+
+  @protected
+  void sse_encode_i_64(PlatformInt64 self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putPlatformInt64(self);
+  }
+
+  @protected
   void sse_encode_list_String(List<String> self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_i_32(self.length, serializer);
     for (final item in self) {
       sse_encode_String(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_database_schema(
+    List<DatabaseSchema> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_database_schema(item, serializer);
     }
   }
 
@@ -569,6 +655,25 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_list_String(self.columns, serializer);
     sse_encode_list_list_String(self.rows, serializer);
+  }
+
+  @protected
+  void sse_encode_schema_overview(
+    SchemaOverview self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_list_database_schema(self.databases, serializer);
+  }
+
+  @protected
+  void sse_encode_table_page_result(
+    TablePageResult self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_query_result(self.result, serializer);
+    sse_encode_i_64(self.totalRows, serializer);
   }
 
   @protected

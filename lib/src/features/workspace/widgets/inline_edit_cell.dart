@@ -39,7 +39,9 @@ class InlineEditCell extends StatelessWidget {
               width: 400,
               height: double.infinity,
               decoration: const BoxDecoration(
-                border: Border(left: BorderSide(color: Color(0xFFE8E5DF), width: 0.5)), // Divider Clay
+                border: Border(
+                  left: BorderSide(color: Color(0xFFE8E5DF), width: 0.5),
+                ), // Divider Clay
               ),
               child: StatefulBuilder(
                 builder: (context, setState) {
@@ -48,14 +50,22 @@ class InlineEditCell extends StatelessWidget {
                     children: [
                       // Header
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 20,
+                        ),
                         child: Text(
                           columnName.toUpperCase(),
-                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF73726F), letterSpacing: 1.0),
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF73726F),
+                            letterSpacing: 1.0,
+                          ),
                         ),
                       ),
                       const Divider(height: 1, color: Color(0xFFE8E5DF)),
-                      
+
                       // Editor Memo Block
                       Expanded(
                         child: SingleChildScrollView(
@@ -76,7 +86,10 @@ class InlineEditCell extends StatelessWidget {
                               Container(
                                 decoration: BoxDecoration(
                                   color: Colors.white,
-                                  border: Border.all(color: const Color(0xFFE8E5DF), width: 0.5),
+                                  border: Border.all(
+                                    color: const Color(0xFFE8E5DF),
+                                    width: 0.5,
+                                  ),
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                                 padding: const EdgeInsets.all(16),
@@ -86,17 +99,29 @@ class InlineEditCell extends StatelessWidget {
                                   autofocus: true,
                                   onChanged: (val) {
                                     currentValue = val;
-                                    if (saveError != null) setState(() => saveError = null);
+                                    if (saveError != null) {
+                                      setState(() => saveError = null);
+                                    }
                                   },
                                   style: TextStyle(
                                     fontSize: 13,
-                                    color: isSpecial ? const Color(0xFF2D2D2D).withValues(alpha: 0.5) : const Color(0xFF2D2D2D),
-                                    fontStyle: isSpecial ? FontStyle.italic : FontStyle.normal,
+                                    color: isSpecial
+                                        ? const Color(
+                                            0xFF2D2D2D,
+                                          ).withValues(alpha: 0.5)
+                                        : const Color(0xFF2D2D2D),
+                                    fontStyle: isSpecial
+                                        ? FontStyle.italic
+                                        : FontStyle.normal,
                                     height: 1.5,
                                   ),
                                   decoration: InputDecoration(
-                                    hintText: isSpecial ? displayValue : "Enter value...",
-                                    hintStyle: const TextStyle(color: Color(0xFFC4C2BC)),
+                                    hintText: isSpecial
+                                        ? displayValue
+                                        : "Enter value...",
+                                    hintStyle: const TextStyle(
+                                      color: Color(0xFFC4C2BC),
+                                    ),
                                     border: InputBorder.none,
                                     isDense: true,
                                     contentPadding: EdgeInsets.zero,
@@ -106,17 +131,26 @@ class InlineEditCell extends StatelessWidget {
                               if (saveError != null)
                                 Padding(
                                   padding: const EdgeInsets.only(top: 16),
-                                  child: Text(saveError!, style: const TextStyle(color: Color(0xFFAC6B62), fontSize: 12)),
+                                  child: Text(
+                                    saveError!,
+                                    style: const TextStyle(
+                                      color: Color(0xFFAC6B62),
+                                      fontSize: 12,
+                                    ),
+                                  ),
                                 ),
                             ],
                           ),
                         ),
                       ),
-                      
+
                       // Footer
                       const Divider(height: 1, color: Color(0xFFE8E5DF)),
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 16,
+                        ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
@@ -124,41 +158,75 @@ class InlineEditCell extends StatelessWidget {
                               onPressed: () => Navigator.pop(context),
                               style: TextButton.styleFrom(
                                 foregroundColor: const Color(0xFF73726F),
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 14,
+                                ),
                               ),
-                              child: const Text("CANCEL", style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 0.5)),
+                              child: const Text(
+                                "CANCEL",
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
                             ),
                             const SizedBox(width: 12),
                             ElevatedButton(
-                              onPressed: isSaving ? null : () async {
-                                if (currentValue == initialValue && !isSpecial) {
-                                  Navigator.pop(context);
-                                  return;
-                                }
-                                setState(() {
-                                  isSaving = true;
-                                  saveError = null;
-                                });
-                                try {
-                                  await onSave!(currentValue);
-                                  if (context.mounted) Navigator.pop(context);
-                                } catch (e) {
-                                  setState(() {
-                                    isSaving = false;
-                                    saveError = e.toString();
-                                  });
-                                }
-                              },
+                              onPressed: isSaving
+                                  ? null
+                                  : () async {
+                                      if (currentValue == initialValue &&
+                                          !isSpecial) {
+                                        Navigator.pop(context);
+                                        return;
+                                      }
+                                      setState(() {
+                                        isSaving = true;
+                                        saveError = null;
+                                      });
+                                      try {
+                                        await onSave!(currentValue);
+                                        if (context.mounted) {
+                                          Navigator.pop(context);
+                                        }
+                                      } catch (e) {
+                                        setState(() {
+                                          isSaving = false;
+                                          saveError = e.toString();
+                                        });
+                                      }
+                                    },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF7F0019),
                                 foregroundColor: Colors.white,
                                 elevation: 0,
-                                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 24,
+                                  vertical: 14,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
                               ),
-                              child: isSaving 
-                                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                                  : const Text("SAVE VALUE", style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 0.5)),
+                              child: isSaving
+                                  ? const SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                        color: Colors.white,
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Text(
+                                      "SAVE VALUE",
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
                             ),
                           ],
                         ),
@@ -173,10 +241,13 @@ class InlineEditCell extends StatelessWidget {
       },
       transitionBuilder: (context, animation, secondaryAnimation, child) {
         return SlideTransition(
-          position: Tween<Offset>(
-            begin: const Offset(1.0, 0.0),
-            end: Offset.zero,
-          ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOutCubic)),
+          position:
+              Tween<Offset>(
+                begin: const Offset(1.0, 0.0),
+                end: Offset.zero,
+              ).animate(
+                CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
+              ),
           child: child,
         );
       },
@@ -196,8 +267,12 @@ class InlineEditCell extends StatelessWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
-            fontSize: 13, 
-            color: isSpecial ? const Color(0xFFAC6B62).withValues(alpha: 0.75) : const Color(0xFF2D2D2D), // Terracotta for NULL/EMPTY indicators
+            fontSize: 13,
+            color: isSpecial
+                ? const Color(0xFFAC6B62).withValues(alpha: 0.75)
+                : const Color(
+                    0xFF2D2D2D,
+                  ), // Terracotta for NULL/EMPTY indicators
             fontStyle: isSpecial ? FontStyle.italic : FontStyle.normal,
           ),
         ),

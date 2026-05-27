@@ -24,8 +24,11 @@ class _ConnectionsPageState extends State<ConnectionsPage> {
     final list = connectionRepository.connections;
     if (_searchQuery.isEmpty) return list;
     return list
-        .where((c) => c.name.toLowerCase().contains(_searchQuery.toLowerCase()) || 
-                      c.host.toLowerCase().contains(_searchQuery.toLowerCase()))
+        .where(
+          (c) =>
+              c.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+              c.host.toLowerCase().contains(_searchQuery.toLowerCase()),
+        )
         .toList();
   }
 
@@ -45,9 +48,7 @@ class _ConnectionsPageState extends State<ConnectionsPage> {
   void _openConnection(DatabaseConnection conn) {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => WorkspacePage(connection: conn),
-      ),
+      MaterialPageRoute(builder: (context) => WorkspacePage(connection: conn)),
     );
   }
 
@@ -63,7 +64,9 @@ class _ConnectionsPageState extends State<ConnectionsPage> {
           appBar: AppBar(
             backgroundColor: const Color(0xFFFAF8F5),
             elevation: 0,
-            shape: const Border(bottom: BorderSide(color: Color(0xFFE8E5DF), width: 0.5)), // Divider Clay
+            shape: const Border(
+              bottom: BorderSide(color: Color(0xFFE8E5DF), width: 0.5),
+            ), // Divider Clay
             title: const Text(
               "CONNECTIONS",
               style: TextStyle(
@@ -79,7 +82,9 @@ class _ConnectionsPageState extends State<ConnectionsPage> {
                 onPressed: () async {
                   await Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const CreateConnectionPage()),
+                    MaterialPageRoute(
+                      builder: (context) => const CreateConnectionPage(),
+                    ),
                   );
                 },
                 style: TextButton.styleFrom(
@@ -111,18 +116,32 @@ class _ConnectionsPageState extends State<ConnectionsPage> {
               child: Column(
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 16,
+                    ),
                     child: SizedBox(
                       height: 38,
                       child: TextField(
                         controller: _searchController,
                         decoration: InputDecoration(
                           hintText: "Search connections...",
-                          hintStyle: const TextStyle(color: Color(0xFFC4C2BC), fontSize: 13),
-                          prefixIcon: const Icon(Icons.search, size: 16, color: Color(0xFF73726F)),
+                          hintStyle: const TextStyle(
+                            color: Color(0xFFC4C2BC),
+                            fontSize: 13,
+                          ),
+                          prefixIcon: const Icon(
+                            Icons.search,
+                            size: 16,
+                            color: Color(0xFF73726F),
+                          ),
                           suffixIcon: _searchController.text.isNotEmpty
                               ? IconButton(
-                                  icon: const Icon(Icons.clear, size: 14, color: Color(0xFF73726F)),
+                                  icon: const Icon(
+                                    Icons.clear,
+                                    size: 14,
+                                    color: Color(0xFF73726F),
+                                  ),
                                   padding: EdgeInsets.zero,
                                   constraints: const BoxConstraints(),
                                   onPressed: () {
@@ -133,19 +152,31 @@ class _ConnectionsPageState extends State<ConnectionsPage> {
                                   },
                                 )
                               : null,
-                          contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 12),
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 0,
+                            horizontal: 12,
+                          ),
                           fillColor: const Color(0xFFF3EFE9), // Kraft Sand
                           filled: true,
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(4),
-                            borderSide: const BorderSide(color: Color(0xFFE8E5DF), width: 0.5),
+                            borderSide: const BorderSide(
+                              color: Color(0xFFE8E5DF),
+                              width: 0.5,
+                            ),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(4),
-                            borderSide: const BorderSide(color: Color(0xFF7F0019), width: 1.0),
+                            borderSide: const BorderSide(
+                              color: Color(0xFF7F0019),
+                              width: 1.0,
+                            ),
                           ),
                         ),
-                        style: const TextStyle(fontSize: 13, color: Color(0xFF2D2D2D)),
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Color(0xFF2D2D2D),
+                        ),
                         onChanged: (value) {
                           setState(() {
                             _searchQuery = value;
@@ -167,9 +198,13 @@ class _ConnectionsPageState extends State<ConnectionsPage> {
                             ),
                           )
                         : ListView.separated(
-                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 8,
+                            ),
                             itemCount: filteredList.length,
-                            separatorBuilder: (context, index) => const SizedBox(height: 12),
+                            separatorBuilder: (context, index) =>
+                                const SizedBox(height: 12),
                             itemBuilder: (context, index) {
                               final conn = filteredList[index];
                               bool isHovered = false;
@@ -177,20 +212,27 @@ class _ConnectionsPageState extends State<ConnectionsPage> {
                               return StatefulBuilder(
                                 builder: (context, setState) {
                                   return MouseRegion(
-                                    onEnter: (_) => setState(() => isHovered = true),
-                                    onExit: (_) => setState(() => isHovered = false),
+                                    onEnter: (_) =>
+                                        setState(() => isHovered = true),
+                                    onExit: (_) =>
+                                        setState(() => isHovered = false),
                                     child: Card(
                                       elevation: 0,
                                       color: Colors.white,
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(4),
-                                        side: const BorderSide(color: Color(0xFFE8E5DF), width: 0.5),
+                                        side: const BorderSide(
+                                          color: Color(0xFFE8E5DF),
+                                          width: 0.5,
+                                        ),
                                       ),
                                       child: InkWell(
                                         onTap: () => _openConnection(conn),
                                         splashColor: Colors.transparent,
                                         highlightColor: Colors.transparent,
-                                        hoverColor: const Color(0xFFF3EFE9), // Kraft Sand hover card backing!
+                                        hoverColor: const Color(
+                                          0xFFF3EFE9,
+                                        ), // Kraft Sand hover card backing!
                                         borderRadius: BorderRadius.circular(4),
                                         child: Padding(
                                           padding: const EdgeInsets.all(16.0),
@@ -200,15 +242,21 @@ class _ConnectionsPageState extends State<ConnectionsPage> {
                                                 width: 40,
                                                 height: 40,
                                                 decoration: BoxDecoration(
-                                                  color: const Color(0xFFFAF8F5), // Washi Cream icon backing
-                                                  borderRadius: BorderRadius.circular(4),
+                                                  color: const Color(
+                                                    0xFFFAF8F5,
+                                                  ), // Washi Cream icon backing
+                                                  borderRadius:
+                                                      BorderRadius.circular(4),
                                                   border: Border.all(
-                                                    color: const Color(0xFFE8E5DF),
+                                                    color: const Color(
+                                                      0xFFE8E5DF,
+                                                    ),
                                                     width: 0.5,
                                                   ),
                                                 ),
                                                 child: const Icon(
-                                                  Icons.dns_outlined, // Cylinder Icon
+                                                  Icons
+                                                      .dns_outlined, // Cylinder Icon
                                                   size: 18,
                                                   color: Color(0xFF73726F),
                                                 ),
@@ -223,8 +271,11 @@ class _ConnectionsPageState extends State<ConnectionsPage> {
                                                       conn.name,
                                                       style: const TextStyle(
                                                         fontSize: 14,
-                                                        fontWeight: FontWeight.w600,
-                                                        color: Color(0xFF2D2D2D), // Sumi Ink
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                        color: Color(
+                                                          0xFF2D2D2D,
+                                                        ), // Sumi Ink
                                                       ),
                                                     ),
                                                     const SizedBox(height: 4),
@@ -232,7 +283,9 @@ class _ConnectionsPageState extends State<ConnectionsPage> {
                                                       "${conn.username}@${conn.host}:${conn.port}",
                                                       style: const TextStyle(
                                                         fontSize: 11,
-                                                        color: Color(0xFF73726F), // Wood Ash
+                                                        color: Color(
+                                                          0xFF73726F,
+                                                        ), // Wood Ash
                                                       ),
                                                     ),
                                                   ],
@@ -251,13 +304,21 @@ class _ConnectionsPageState extends State<ConnectionsPage> {
                                                     elevation: 2,
                                                     shape: RoundedRectangleBorder(
                                                       borderRadius:
-                                                          BorderRadius.circular(4),
-                                                      side: const BorderSide(color: Color(0xFFE8E5DF), width: 0.5),
+                                                          BorderRadius.circular(
+                                                            4,
+                                                          ),
+                                                      side: const BorderSide(
+                                                        color: Color(
+                                                          0xFFE8E5DF,
+                                                        ),
+                                                        width: 0.5,
+                                                      ),
                                                     ),
                                                     onSelected: (value) {
                                                       if (value == 'edit') {
                                                         _editConnection(conn);
-                                                      } else if (value == 'delete') {
+                                                      } else if (value ==
+                                                          'delete') {
                                                         _deleteConnection(conn);
                                                       }
                                                     },
@@ -266,7 +327,9 @@ class _ConnectionsPageState extends State<ConnectionsPage> {
                                                         value: 'edit',
                                                         child: Text(
                                                           "Edit",
-                                                          style: TextStyle(fontSize: 13),
+                                                          style: TextStyle(
+                                                            fontSize: 13,
+                                                          ),
                                                         ),
                                                       ),
                                                       const PopupMenuItem(
@@ -275,7 +338,9 @@ class _ConnectionsPageState extends State<ConnectionsPage> {
                                                           "Delete",
                                                           style: TextStyle(
                                                             fontSize: 13,
-                                                            color: Color(0xFFAC6B62),
+                                                            color: Color(
+                                                              0xFFAC6B62,
+                                                            ),
                                                           ),
                                                         ),
                                                       ),

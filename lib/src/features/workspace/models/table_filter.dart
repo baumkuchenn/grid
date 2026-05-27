@@ -1,3 +1,5 @@
+import 'sql_identifier.dart';
+
 class TableFilter {
   String columnName;
   String operator;
@@ -11,31 +13,32 @@ class TableFilter {
 
   String toSql() {
     final escapedValue = value.replaceAll("'", "''");
+    final quotedColumn = quoteMysqlIdentifier(columnName);
     switch (operator) {
       case 'equals':
-        return '`$columnName` = \'$escapedValue\'';
+        return '$quotedColumn = \'$escapedValue\'';
       case 'not_equals':
-        return '`$columnName` != \'$escapedValue\'';
+        return '$quotedColumn != \'$escapedValue\'';
       case 'contains':
-        return '`$columnName` LIKE \'%$escapedValue%\'';
+        return '$quotedColumn LIKE \'%$escapedValue%\'';
       case 'not_contains':
-        return '`$columnName` NOT LIKE \'%$escapedValue%\'';
+        return '$quotedColumn NOT LIKE \'%$escapedValue%\'';
       case 'starts_with':
-        return '`$columnName` LIKE \'$escapedValue%\'';
+        return '$quotedColumn LIKE \'$escapedValue%\'';
       case 'ends_with':
-        return '`$columnName` LIKE \'%$escapedValue\'';
+        return '$quotedColumn LIKE \'%$escapedValue\'';
       case 'greater_than':
-        return '`$columnName` > \'$escapedValue\'';
+        return '$quotedColumn > \'$escapedValue\'';
       case 'less_than':
-        return '`$columnName` < \'$escapedValue\'';
+        return '$quotedColumn < \'$escapedValue\'';
       case 'greater_equals':
-        return '`$columnName` >= \'$escapedValue\'';
+        return '$quotedColumn >= \'$escapedValue\'';
       case 'less_equals':
-        return '`$columnName` <= \'$escapedValue\'';
+        return '$quotedColumn <= \'$escapedValue\'';
       case 'is_null':
-        return '`$columnName` IS NULL';
+        return '$quotedColumn IS NULL';
       case 'is_not_null':
-        return '`$columnName` IS NOT NULL';
+        return '$quotedColumn IS NOT NULL';
       default:
         return '1 = 1';
     }

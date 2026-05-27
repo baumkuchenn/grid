@@ -6,7 +6,8 @@ import 'package:flutter/foundation.dart';
 final ConnectionRepository connectionRepository = ConnectionRepository();
 
 // Legacy getter for backward-compatibility if accessed in read-only mode
-List<DatabaseConnection> get globalConnections => connectionRepository.connections;
+List<DatabaseConnection> get globalConnections =>
+    connectionRepository.connections;
 
 class DatabaseConnection {
   final String id;
@@ -62,20 +63,22 @@ class ConnectionStorage {
 
   static File _getFile() {
     if (_cachedFile != null) return _cachedFile!;
-    
+
     String? homePath;
     if (Platform.isWindows) {
-      homePath = Platform.environment['USERPROFILE'] ?? Platform.environment['APPDATA'];
+      homePath =
+          Platform.environment['USERPROFILE'] ??
+          Platform.environment['APPDATA'];
     } else if (Platform.isMacOS || Platform.isLinux) {
       homePath = Platform.environment['HOME'];
     }
-    
+
     if (homePath != null && Directory(homePath).existsSync()) {
       _cachedFile = File('$homePath/.grid_connections.json');
     } else {
       _cachedFile = File('${Directory.systemTemp.path}/.grid_connections.json');
     }
-    
+
     return _cachedFile!;
   }
 
@@ -85,7 +88,12 @@ class ConnectionStorage {
       if (await file.exists()) {
         final content = await file.readAsString();
         final List<dynamic> jsonList = jsonDecode(content);
-        return jsonList.map((json) => DatabaseConnection.fromJson(json as Map<String, dynamic>)).toList();
+        return jsonList
+            .map(
+              (json) =>
+                  DatabaseConnection.fromJson(json as Map<String, dynamic>),
+            )
+            .toList();
       }
     } catch (e) {
       debugPrint("Error loading connections: $e");
@@ -93,7 +101,9 @@ class ConnectionStorage {
     return [];
   }
 
-  static Future<void> saveConnections(List<DatabaseConnection> connections) async {
+  static Future<void> saveConnections(
+    List<DatabaseConnection> connections,
+  ) async {
     try {
       final file = _getFile();
       final jsonList = connections.map((c) => c.toJson()).toList();
@@ -132,7 +142,8 @@ class ConnectionRepository extends ChangeNotifier {
     await save();
   }
 
-  Future<void> update(DatabaseConnection connection, {
+  Future<void> update(
+    DatabaseConnection connection, {
     required String name,
     required String type,
     required String host,

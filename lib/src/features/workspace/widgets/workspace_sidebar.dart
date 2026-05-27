@@ -1,5 +1,46 @@
 import 'package:flutter/material.dart';
 
+final RegExp _schemaSearchSeparatorPattern = RegExp(r'[^a-z0-9]+');
+final RegExp _schemaSearchCompactPattern = RegExp(r'[^a-z0-9]');
+
+List<String> _schemaSearchTokens(String value) {
+  return value
+      .toLowerCase()
+      .split(_schemaSearchSeparatorPattern)
+      .where((token) => token.isNotEmpty)
+      .toList();
+}
+
+String _schemaSearchCompact(String value) {
+  return value.toLowerCase().replaceAll(_schemaSearchCompactPattern, '');
+}
+
+bool _schemaSearchMatches(String value, String query) {
+  final trimmedQuery = query.trim();
+  if (trimmedQuery.isEmpty) return true;
+
+  final valueLower = value.toLowerCase();
+  final queryLower = trimmedQuery.toLowerCase();
+  if (valueLower.contains(queryLower)) return true;
+
+  final valueCompact = _schemaSearchCompact(value);
+  final queryCompact = _schemaSearchCompact(trimmedQuery);
+  if (queryCompact.isNotEmpty && valueCompact.contains(queryCompact)) {
+    return true;
+  }
+
+  final valueTokens = _schemaSearchTokens(value);
+  final queryTokens = _schemaSearchTokens(trimmedQuery);
+  if (queryTokens.isEmpty) return false;
+
+  return queryTokens.every(
+    (queryToken) => valueTokens.any(
+      (valueToken) =>
+          valueToken.contains(queryToken) || valueToken.startsWith(queryToken),
+    ),
+  );
+}
+
 class WorkspaceSidebar extends StatefulWidget {
   final bool isLoadingDatabases;
   final String errorMessage;
@@ -8,18 +49,18 @@ class WorkspaceSidebar extends StatefulWidget {
   final VoidCallback onRetryDatabases;
   final VoidCallback onOpenQueryTab;
   final Function(String db, String table) onOpenTableTab;
-  
+
   // Database actions
   final VoidCallback onCreateDatabase;
   final Function(String db) onRenameDatabase;
   final Function(String db) onDropDatabase;
   final Function(String db) onCreateTable;
-  
+
   // Table actions
   final Function(String db, String table) onCloneTable;
   final Function(String db, String table) onTruncateTable;
   final Function(String db, String table) onDropTable;
-  
+
   // External focus node to support keyboard shortcuts
   final FocusNode searchFocusNode;
 
@@ -59,7 +100,12 @@ class _WorkspaceSidebarState extends State<WorkspaceSidebar> {
   @override
   Widget build(BuildContext context) {
     if (widget.isLoadingDatabases) {
-      return const Center(child: CircularProgressIndicator(color: Color(0xFF7F0019), strokeWidth: 2));
+      return const Center(
+        child: CircularProgressIndicator(
+          color: Color(0xFF7F0019),
+          strokeWidth: 2,
+        ),
+      );
     }
 
     if (widget.errorMessage.isNotEmpty) {
@@ -69,23 +115,34 @@ class _WorkspaceSidebarState extends State<WorkspaceSidebar> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.error_outline, color: Color(0xFFAC6B62), size: 32),
+              const Icon(
+                Icons.error_outline,
+                color: Color(0xFFAC6B62),
+                size: 32,
+              ),
               const SizedBox(height: 12),
-              Text(widget.errorMessage, textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, color: Color(0xFF73726F))),
+              Text(
+                widget.errorMessage,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 12, color: Color(0xFF73726F)),
+              ),
               const SizedBox(height: 12),
-              TextButton(onPressed: widget.onRetryDatabases, child: const Text("RETRY"))
+              TextButton(
+                onPressed: widget.onRetryDatabases,
+                child: const Text("RETRY"),
+              ),
             ],
           ),
         ),
       );
     }
 
-    String q = _unifiedSearchQuery.trim().toLowerCase();
+    String q = _unifiedSearchQuery.trim();
     List<String> filteredDatabases = widget.databases.where((db) {
       if (q.isEmpty) return true;
-      final dbMatches = db.toLowerCase().contains(q);
+      final dbMatches = _schemaSearchMatches(db, q);
       final tables = widget.databaseTables[db] ?? [];
-      final hasMatchingTable = tables.any((t) => t.toLowerCase().contains(q));
+      final hasMatchingTable = tables.any((t) => _schemaSearchMatches(t, q));
       return dbMatches || hasMatchingTable;
     }).toList();
 
@@ -105,11 +162,22 @@ class _WorkspaceSidebarState extends State<WorkspaceSidebar> {
                   focusNode: widget.searchFocusNode,
                   decoration: InputDecoration(
                     hintText: "Search databases or tables...",
-                    hintStyle: const TextStyle(color: Color(0xFFC4C2BC), fontSize: 13),
-                    prefixIcon: const Icon(Icons.search, size: 16, color: Color(0xFF73726F)),
+                    hintStyle: const TextStyle(
+                      color: Color(0xFFC4C2BC),
+                      fontSize: 13,
+                    ),
+                    prefixIcon: const Icon(
+                      Icons.search,
+                      size: 16,
+                      color: Color(0xFF73726F),
+                    ),
                     suffixIcon: _searchController.text.isNotEmpty
                         ? IconButton(
-                            icon: const Icon(Icons.clear, size: 14, color: Color(0xFF73726F)),
+                            icon: const Icon(
+                              Icons.clear,
+                              size: 14,
+                              color: Color(0xFF73726F),
+                            ),
                             padding: EdgeInsets.zero,
                             constraints: const BoxConstraints(),
                             onPressed: () {
@@ -122,7 +190,10 @@ class _WorkspaceSidebarState extends State<WorkspaceSidebar> {
                         : UnconstrainedBox(
                             child: Container(
                               margin: const EdgeInsets.only(right: 8),
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
                               decoration: BoxDecoration(
                                 color: const Color(0xFFE8E5DF), // Divider Clay
                                 borderRadius: BorderRadius.circular(4),
@@ -137,19 +208,31 @@ class _WorkspaceSidebarState extends State<WorkspaceSidebar> {
                               ),
                             ),
                           ),
-                    contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 12),
+                    contentPadding: const EdgeInsets.symmetric(
+                      vertical: 0,
+                      horizontal: 12,
+                    ),
                     fillColor: const Color(0xFFFAF8F5), // Washi Cream
                     filled: true,
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(4),
-                      borderSide: const BorderSide(color: Color(0xFFE8E5DF), width: 0.5),
+                      borderSide: const BorderSide(
+                        color: Color(0xFFE8E5DF),
+                        width: 0.5,
+                      ),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(4),
-                      borderSide: const BorderSide(color: Color(0xFF7F0019), width: 1),
+                      borderSide: const BorderSide(
+                        color: Color(0xFF7F0019),
+                        width: 1,
+                      ),
                     ),
                   ),
-                  style: const TextStyle(fontSize: 13, color: Color(0xFF2D2D2D)),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: Color(0xFF2D2D2D),
+                  ),
                   onChanged: (val) {
                     setState(() {
                       _unifiedSearchQuery = val;
@@ -165,14 +248,26 @@ class _WorkspaceSidebarState extends State<WorkspaceSidebar> {
                 hoverColor: const Color(0xFFFAF8F5), // Washi Cream
                 borderRadius: BorderRadius.circular(4),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 8,
+                    horizontal: 8,
+                  ),
                   child: Row(
                     children: [
-                      const Icon(Icons.terminal_outlined, size: 16, color: Color(0xFF73726F)),
+                      const Icon(
+                        Icons.terminal_outlined,
+                        size: 16,
+                        color: Color(0xFF73726F),
+                      ),
                       const SizedBox(width: 12),
                       const Text(
-                        "New Query", 
-                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF2D2D2D), letterSpacing: 0.2),
+                        "New Query",
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF2D2D2D),
+                          letterSpacing: 0.2,
+                        ),
                       ),
                     ],
                   ),
@@ -198,9 +293,13 @@ class _WorkspaceSidebarState extends State<WorkspaceSidebar> {
                     borderRadius: BorderRadius.circular(10),
                     child: const Padding(
                       padding: EdgeInsets.all(4.0),
-                      child: Icon(Icons.add, size: 16, color: Color(0xFF73726F)),
+                      child: Icon(
+                        Icons.add,
+                        size: 16,
+                        color: Color(0xFF73726F),
+                      ),
                     ),
-                  )
+                  ),
                 ],
               ),
             ],
@@ -217,17 +316,21 @@ class _WorkspaceSidebarState extends State<WorkspaceSidebar> {
               itemBuilder: (context, index) {
                 final db = filteredDatabases[index];
                 final allTables = widget.databaseTables[db] ?? [];
-                
+
                 final tables = allTables.where((t) {
                   if (q.isEmpty) return true;
-                  return db.toLowerCase().contains(q) || t.toLowerCase().contains(q);
+                  return _schemaSearchMatches(db, q) ||
+                      _schemaSearchMatches(t, q);
                 }).toList();
-  
+
                 bool isDbHovered = false;
                 return ExpansionTile(
                   key: PageStorageKey('db_${db}_${q.isNotEmpty}'),
                   initiallyExpanded: q.isNotEmpty,
-                  tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                  tilePadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 0,
+                  ),
                   controlAffinity: ListTileControlAffinity.leading,
                   title: StatefulBuilder(
                     builder: (context, setState) {
@@ -236,12 +339,20 @@ class _WorkspaceSidebarState extends State<WorkspaceSidebar> {
                         onExit: (_) => setState(() => isDbHovered = false),
                         child: Row(
                           children: [
-                            const Icon(Icons.dns_outlined, size: 16, color: Color(0xFF73726F)),
+                            const Icon(
+                              Icons.dns_outlined,
+                              size: 16,
+                              color: Color(0xFF73726F),
+                            ),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                db, 
-                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF2D2D2D)),
+                                db,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF2D2D2D),
+                                ),
                               ),
                             ),
                             Opacity(
@@ -249,25 +360,56 @@ class _WorkspaceSidebarState extends State<WorkspaceSidebar> {
                               child: IgnorePointer(
                                 ignoring: !isDbHovered,
                                 child: PopupMenuButton<String>(
-                                  icon: const Icon(Icons.more_vert, size: 16, color: Color(0xFF73726F)),
+                                  icon: const Icon(
+                                    Icons.more_vert,
+                                    size: 16,
+                                    color: Color(0xFF73726F),
+                                  ),
                                   padding: EdgeInsets.zero,
                                   onSelected: (val) {
-                                    if (val == 'rename') widget.onRenameDatabase(db);
-                                    if (val == 'drop') widget.onDropDatabase(db);
-                                    if (val == 'create_table') widget.onCreateTable(db);
+                                    if (val == 'rename') {
+                                      widget.onRenameDatabase(db);
+                                    }
+                                    if (val == 'drop') {
+                                      widget.onDropDatabase(db);
+                                    }
+                                    if (val == 'create_table') {
+                                      widget.onCreateTable(db);
+                                    }
                                   },
                                   itemBuilder: (context) => [
-                                    const PopupMenuItem(value: 'create_table', child: Text("Create Table", style: TextStyle(fontSize: 13))),
-                                    const PopupMenuItem(value: 'rename', child: Text("Rename Database", style: TextStyle(fontSize: 13))),
-                                    const PopupMenuItem(value: 'drop', child: Text("Drop Database", style: TextStyle(fontSize: 13, color: Color(0xFFAC6B62)))),
-                                  ]
+                                    const PopupMenuItem(
+                                      value: 'create_table',
+                                      child: Text(
+                                        "Create Table",
+                                        style: TextStyle(fontSize: 13),
+                                      ),
+                                    ),
+                                    const PopupMenuItem(
+                                      value: 'rename',
+                                      child: Text(
+                                        "Rename Database",
+                                        style: TextStyle(fontSize: 13),
+                                      ),
+                                    ),
+                                    const PopupMenuItem(
+                                      value: 'drop',
+                                      child: Text(
+                                        "Drop Database",
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          color: Color(0xFFAC6B62),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                            )
+                            ),
                           ],
                         ),
                       );
-                    }
+                    },
                   ),
                   iconColor: const Color(0xFF2D2D2D),
                   collapsedIconColor: const Color(0xFF73726F),
@@ -287,18 +429,35 @@ class _WorkspaceSidebarState extends State<WorkspaceSidebar> {
                               onTap: () => widget.onOpenTableTab(db, table),
                               splashColor: Colors.transparent,
                               highlightColor: Colors.transparent,
-                              hoverColor: const Color(0xFFFAF8F5), // Washi Cream
+                              hoverColor: const Color(
+                                0xFFFAF8F5,
+                              ), // Washi Cream
                               child: Container(
-                                padding: const EdgeInsets.only(left: 48, right: 16, top: 4, bottom: 4),
-                                color: isHovered ? const Color(0xFFFAF8F5) : Colors.transparent,
+                                padding: const EdgeInsets.only(
+                                  left: 48,
+                                  right: 16,
+                                  top: 4,
+                                  bottom: 4,
+                                ),
+                                color: isHovered
+                                    ? const Color(0xFFFAF8F5)
+                                    : Colors.transparent,
                                 child: Row(
                                   children: [
-                                    const Icon(Icons.table_chart_outlined, size: 16, color: Color(0xFF73726F)),
+                                    const Icon(
+                                      Icons.table_chart_outlined,
+                                      size: 16,
+                                      color: Color(0xFF73726F),
+                                    ),
                                     const SizedBox(width: 12),
                                     Expanded(
                                       child: Text(
-                                        table, 
-                                        style: const TextStyle(fontSize: 13, color: Color(0xFF2D2D2D), height: 1.2), 
+                                        table,
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          color: Color(0xFF2D2D2D),
+                                          height: 1.2,
+                                        ),
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
@@ -307,27 +466,58 @@ class _WorkspaceSidebarState extends State<WorkspaceSidebar> {
                                       child: IgnorePointer(
                                         ignoring: !isHovered,
                                         child: PopupMenuButton<String>(
-                                          icon: const Icon(Icons.more_horiz, size: 16, color: Color(0xFF73726F)),
+                                          icon: const Icon(
+                                            Icons.more_horiz,
+                                            size: 16,
+                                            color: Color(0xFF73726F),
+                                          ),
                                           padding: EdgeInsets.zero,
                                           onSelected: (val) {
-                                            if (val == 'clone') widget.onCloneTable(db, table);
-                                            if (val == 'truncate') widget.onTruncateTable(db, table);
-                                            if (val == 'drop') widget.onDropTable(db, table);
+                                            if (val == 'clone') {
+                                              widget.onCloneTable(db, table);
+                                            }
+                                            if (val == 'truncate') {
+                                              widget.onTruncateTable(db, table);
+                                            }
+                                            if (val == 'drop') {
+                                              widget.onDropTable(db, table);
+                                            }
                                           },
                                           itemBuilder: (context) => [
-                                            const PopupMenuItem(value: 'clone', child: Text("Clone Table", style: TextStyle(fontSize: 13))),
-                                            const PopupMenuItem(value: 'truncate', child: Text("Truncate Data", style: TextStyle(fontSize: 13))),
-                                            const PopupMenuItem(value: 'drop', child: Text("Drop Table", style: TextStyle(fontSize: 13, color: Color(0xFFAC6B62)))),
-                                          ]
+                                            const PopupMenuItem(
+                                              value: 'clone',
+                                              child: Text(
+                                                "Clone Table",
+                                                style: TextStyle(fontSize: 13),
+                                              ),
+                                            ),
+                                            const PopupMenuItem(
+                                              value: 'truncate',
+                                              child: Text(
+                                                "Truncate Data",
+                                                style: TextStyle(fontSize: 13),
+                                              ),
+                                            ),
+                                            const PopupMenuItem(
+                                              value: 'drop',
+                                              child: Text(
+                                                "Drop Table",
+                                                style: TextStyle(
+                                                  fontSize: 13,
+                                                  color: Color(0xFFAC6B62),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ),
-                                    )
+                                    ),
                                   ],
                                 ),
                               ),
                             ),
                           );
-                        }
+                        },
                       );
                     }),
                     // Show message if no tables match
@@ -335,8 +525,14 @@ class _WorkspaceSidebarState extends State<WorkspaceSidebar> {
                       Padding(
                         key: ValueKey('no_tables_$db'),
                         padding: const EdgeInsets.fromLTRB(48, 8, 16, 16),
-                        child: const Text("No tables match filter.", style: TextStyle(fontSize: 12, color: Color(0xFFC4C2BC))),
-                      )
+                        child: const Text(
+                          "No tables match filter.",
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFFC4C2BC),
+                          ),
+                        ),
+                      ),
                   ],
                 );
               },

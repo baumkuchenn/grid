@@ -10,11 +10,8 @@ class WorkspaceDialogs {
   }) async {
     return showDialog<String>(
       context: context,
-      builder: (context) => _FormDialog(
-        title: title,
-        label: label,
-        initialValue: initialValue,
-      ),
+      builder: (context) =>
+          _FormDialog(title: title, label: label, initialValue: initialValue),
     );
   }
 
@@ -82,7 +79,8 @@ class WorkspaceDialogs {
                         height: 24,
                         child: Checkbox(
                           value: disableFk,
-                          onChanged: (v) => setState(() => disableFk = v ?? false),
+                          onChanged: (v) =>
+                              setState(() => disableFk = v ?? false),
                           activeColor: const Color(0xFFAC6B62),
                         ),
                       ),
@@ -91,7 +89,7 @@ class WorkspaceDialogs {
                         child: Text(
                           "Disable Foreign Key Checks",
                           style: TextStyle(
-                            fontSize: 13, 
+                            fontSize: 13,
                             fontWeight: FontWeight.w500,
                             color: Color(0xFF2D2D2D),
                           ),
@@ -108,7 +106,10 @@ class WorkspaceDialogs {
                       onPressed: () => Navigator.pop(context),
                       style: TextButton.styleFrom(
                         foregroundColor: const Color(0xFF73726F),
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
                       ),
                       child: const Text(
                         "CANCEL",
@@ -126,13 +127,18 @@ class WorkspaceDialogs {
                         showFkCheckbox ? disableFk : true,
                       ),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFAC6B62), // Terracotta warning background
+                        backgroundColor: const Color(
+                          0xFFAC6B62,
+                        ), // Terracotta warning background
                         foregroundColor: Colors.white,
                         elevation: 0,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(4),
                         ),
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 14,
+                        ),
                       ),
                       child: Text(
                         confirmText.toUpperCase(),
@@ -144,7 +150,7 @@ class WorkspaceDialogs {
                       ),
                     ),
                   ],
-                )
+                ),
               ],
             ),
           ),
@@ -232,7 +238,10 @@ class _FormDialogState extends State<_FormDialog> {
                 isDense: true,
                 fillColor: Colors.white,
                 filled: true,
-                contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
                 enabledBorder: OutlineInputBorder(
                   borderSide: BorderSide(color: Color(0xFFE8E5DF), width: 0.5),
                 ),
@@ -249,7 +258,10 @@ class _FormDialogState extends State<_FormDialog> {
                   onPressed: () => Navigator.pop(context),
                   style: TextButton.styleFrom(
                     foregroundColor: const Color(0xFF73726F),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                   ),
                   child: const Text(
                     "CANCEL",
@@ -270,7 +282,10 @@ class _FormDialogState extends State<_FormDialog> {
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(4),
                     ),
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 14,
+                    ),
                   ),
                   child: const Text(
                     "SAVE",
@@ -282,7 +297,7 @@ class _FormDialogState extends State<_FormDialog> {
                   ),
                 ),
               ],
-            )
+            ),
           ],
         ),
       ),
@@ -364,7 +379,10 @@ class _CloneTableDialogState extends State<_CloneTableDialog> {
                 isDense: true,
                 fillColor: Colors.white,
                 filled: true,
-                contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
                 enabledBorder: OutlineInputBorder(
                   borderSide: BorderSide(color: Color(0xFFE8E5DF), width: 0.5),
                 ),
@@ -381,7 +399,8 @@ class _CloneTableDialogState extends State<_CloneTableDialog> {
                   height: 24,
                   child: Checkbox(
                     value: _duplicateData,
-                    onChanged: (v) => setState(() => _duplicateData = v ?? false),
+                    onChanged: (v) =>
+                        setState(() => _duplicateData = v ?? false),
                     activeColor: const Color(0xFF7F0019), // Muji Red
                   ),
                 ),
@@ -404,7 +423,10 @@ class _CloneTableDialogState extends State<_CloneTableDialog> {
                   onPressed: () => Navigator.pop(context),
                   style: TextButton.styleFrom(
                     foregroundColor: const Color(0xFF73726F),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                   ),
                   child: const Text(
                     "CANCEL",
@@ -417,10 +439,10 @@ class _CloneTableDialogState extends State<_CloneTableDialog> {
                 ),
                 const SizedBox(width: 12),
                 ElevatedButton(
-                  onPressed: () => Navigator.pop(
-                    context,
-                    {'name': _controller.text, 'data': _duplicateData},
-                  ),
+                  onPressed: () => Navigator.pop(context, {
+                    'name': _controller.text,
+                    'data': _duplicateData,
+                  }),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF7F0019),
                     foregroundColor: Colors.white,
@@ -428,7 +450,10 @@ class _CloneTableDialogState extends State<_CloneTableDialog> {
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(4),
                     ),
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 14,
+                    ),
                   ),
                   child: const Text(
                     "CLONE",
@@ -440,7 +465,7 @@ class _CloneTableDialogState extends State<_CloneTableDialog> {
                   ),
                 ),
               ],
-            )
+            ),
           ],
         ),
       ),

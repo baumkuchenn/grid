@@ -37,6 +37,8 @@ dependencies:
   rust_lib_grid:
     path: rust_builder
   flutter_rust_bridge: 2.12.0
+  file_picker: ^8.3.7
+  two_dimensional_scrollables: ^0.5.2
 
 dev_dependencies:
   flutter_test:

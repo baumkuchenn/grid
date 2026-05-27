@@ -21,7 +21,9 @@ class WorkspaceTabsBar extends StatelessWidget {
       height: 48,
       decoration: const BoxDecoration(
         color: Color(0xFFF3EFE9), // Kraft Sand tab track
-        border: Border(bottom: BorderSide(color: Color(0xFFE8E5DF), width: 0.5)), // Divider Clay
+        border: Border(
+          bottom: BorderSide(color: Color(0xFFE8E5DF), width: 0.5),
+        ), // Divider Clay
       ),
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
@@ -35,10 +37,15 @@ class WorkspaceTabsBar extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               decoration: BoxDecoration(
-                color: isActive ? const Color(0xFFFAF8F5) : Colors.transparent, // Active tab matches Washi Cream sheet below it!
+                color: isActive
+                    ? const Color(0xFFFAF8F5)
+                    : Colors
+                          .transparent, // Active tab matches Washi Cream sheet below it!
                 border: Border(
                   top: BorderSide(
-                    color: isActive ? const Color(0xFF7F0019) : Colors.transparent, // Muji Red Signature
+                    color: isActive
+                        ? const Color(0xFF7F0019)
+                        : Colors.transparent, // Muji Red Signature
                     width: 3, // Premium thicker rule
                   ),
                   right: const BorderSide(color: Color(0xFFE8E5DF), width: 0.5),
@@ -47,9 +54,13 @@ class WorkspaceTabsBar extends StatelessWidget {
               child: Row(
                 children: [
                   Icon(
-                    tab.tableName == null ? Icons.terminal_outlined : Icons.table_chart_outlined,
+                    tab.tableName == null
+                        ? Icons.terminal_outlined
+                        : Icons.table_chart_outlined,
                     size: 14,
-                    color: isActive ? const Color(0xFF2D2D2D) : const Color(0xFF73726F),
+                    color: isActive
+                        ? const Color(0xFF2D2D2D)
+                        : const Color(0xFF73726F),
                   ),
                   const SizedBox(width: 8),
                   Text(
@@ -57,7 +68,9 @@ class WorkspaceTabsBar extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
-                      color: isActive ? const Color(0xFF2D2D2D) : const Color(0xFF73726F),
+                      color: isActive
+                          ? const Color(0xFF2D2D2D)
+                          : const Color(0xFF73726F),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -67,12 +80,14 @@ class WorkspaceTabsBar extends StatelessWidget {
                     child: Padding(
                       padding: const EdgeInsets.all(4.0),
                       child: Icon(
-                        Icons.close, 
-                        size: 14, 
-                        color: isActive ? const Color(0xFF2D2D2D) : const Color(0xFF73726F),
+                        Icons.close,
+                        size: 14,
+                        color: isActive
+                            ? const Color(0xFF2D2D2D)
+                            : const Color(0xFF73726F),
                       ),
                     ),
-                  )
+                  ),
                 ],
               ),
             ),

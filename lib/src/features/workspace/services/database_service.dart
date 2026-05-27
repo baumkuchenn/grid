@@ -1,6 +1,6 @@
 import '../../../rust/api/simple.dart';
 
-/// Service class to encapsulate database/schema actions and decouple SQL composition 
+/// Service class to encapsulate database/schema actions and decouple SQL composition
 /// and Rust Bridge execution from Flutter presentation components.
 class DatabaseService {
   final String url;
@@ -17,14 +17,9 @@ class DatabaseService {
     }
   }
 
-  /// Retrieve the list of databases from the server
-  Future<List<String>> fetchDatabases() async {
-    return getMysqlDatabases(url: url);
-  }
-
-  /// Retrieve the list of tables for a given database
-  Future<List<String>> fetchTables(String database) async {
-    return getMysqlTables(url: url, database: database);
+  /// Retrieve databases and their tables in a single Rust/SQL round trip.
+  Future<SchemaOverview> fetchSchemaOverview() async {
+    return getMysqlSchemaOverview(url: url);
   }
 
   /// Create a database with the specified name
@@ -38,7 +33,11 @@ class DatabaseService {
   }
 
   /// Rename a database by creating the new database, renaming tables, and dropping the old one
-  Future<void> renameDatabase(String oldDb, String newDb, List<String> tables) async {
+  Future<void> renameDatabase(
+    String oldDb,
+    String newDb,
+    List<String> tables,
+  ) async {
     await executeMysqlAction(
       url: url,
       database: '',
@@ -82,7 +81,12 @@ class DatabaseService {
   }
 
   /// Clone a table's structure (and optionally its data)
-  Future<void> cloneTable(String db, String table, String newName, bool duplicateData) async {
+  Future<void> cloneTable(
+    String db,
+    String table,
+    String newName,
+    bool duplicateData,
+  ) async {
     await executeMysqlAction(
       url: url,
       database: db,

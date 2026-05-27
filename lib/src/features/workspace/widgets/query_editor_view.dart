@@ -234,7 +234,10 @@ class QueryEditorViewState extends State<QueryEditorView> {
                     padding: const EdgeInsets.all(20),
                     child: Text(
                       _error,
-                      style: const TextStyle(color: Color(0xFFAC6B62), fontSize: 13), // Terracotta alert
+                      style: const TextStyle(
+                        color: Color(0xFFAC6B62),
+                        fontSize: 13,
+                      ), // Terracotta alert
                     ),
                   )
                 : _result != null
@@ -249,7 +252,10 @@ class QueryEditorViewState extends State<QueryEditorView> {
                         decoration: const BoxDecoration(
                           color: Color(0xFFFAF8F5), // Washi Cream Sheet
                           border: Border(
-                            bottom: BorderSide(color: Color(0xFFE8E5DF), width: 0.5), // Divider Clay
+                            bottom: BorderSide(
+                              color: Color(0xFFE8E5DF),
+                              width: 0.5,
+                            ), // Divider Clay
                           ),
                         ),
                         child: Row(
@@ -287,7 +293,11 @@ class QueryEditorViewState extends State<QueryEditorView> {
                 : const Center(
                     child: Text(
                       "Run a query to see results.",
-                      style: TextStyle(color: Color(0xFF73726F), fontStyle: FontStyle.italic, fontSize: 13), // Wood Ash
+                      style: TextStyle(
+                        color: Color(0xFF73726F),
+                        fontStyle: FontStyle.italic,
+                        fontSize: 13,
+                      ), // Wood Ash
                     ),
                   ),
           ),

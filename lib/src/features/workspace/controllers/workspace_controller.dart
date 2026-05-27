@@ -1,14 +1,74 @@
 import 'dart:async';
-import 'package:flutter/material.dart';
+
+import 'package:flutter/foundation.dart';
+
+import '../../connections/models/database_connection.dart';
 import '../models/workspace_tab.dart';
 import '../services/database_service.dart';
-import '../../connections/models/database_connection.dart';
+
+class WorkspaceSchemaState {
+  final bool isLoadingDatabases;
+  final String errorMessage;
+  final List<String> databases;
+  final Map<String, List<String>> databaseTables;
+
+  const WorkspaceSchemaState({
+    required this.isLoadingDatabases,
+    required this.errorMessage,
+    required this.databases,
+    required this.databaseTables,
+  });
+
+  const WorkspaceSchemaState.loading()
+    : isLoadingDatabases = true,
+      errorMessage = '',
+      databases = const [],
+      databaseTables = const {};
+}
+
+class WorkspaceTabsState {
+  final List<WorkspaceTab> tabs;
+  final String? activeTabId;
+
+  const WorkspaceTabsState({required this.tabs, required this.activeTabId});
+}
+
+class WorkspaceConnectionState {
+  final bool isAlive;
+  final bool isChecking;
+
+  const WorkspaceConnectionState({
+    required this.isAlive,
+    required this.isChecking,
+  });
+}
+
+@visibleForTesting
+Map<String, List<String>> immutableDatabaseTablesSnapshot(
+  Map<String, List<String>> databaseTables,
+) {
+  return Map<String, List<String>>.unmodifiable(<String, List<String>>{
+    for (final entry in databaseTables.entries)
+      entry.key: List<String>.unmodifiable(entry.value),
+  });
+}
 
 /// Controller to manage state and business logic for the Workspace feature,
 /// decoupling it entirely from the Flutter UI layout.
-class WorkspaceController extends ChangeNotifier {
+class WorkspaceController {
   final DatabaseConnection connection;
   final DatabaseService _dbService;
+
+  final ValueNotifier<WorkspaceSchemaState> schemaState =
+      ValueNotifier<WorkspaceSchemaState>(const WorkspaceSchemaState.loading());
+  final ValueNotifier<WorkspaceTabsState> tabsState =
+      ValueNotifier<WorkspaceTabsState>(
+        const WorkspaceTabsState(tabs: [], activeTabId: null),
+      );
+  final ValueNotifier<WorkspaceConnectionState> connectionState =
+      ValueNotifier<WorkspaceConnectionState>(
+        const WorkspaceConnectionState(isAlive: true, isChecking: false),
+      );
 
   bool _isLoadingDatabases = true;
   String _errorMessage = '';
@@ -23,7 +83,7 @@ class WorkspaceController extends ChangeNotifier {
   Timer? _connectionCheckTimer;
 
   WorkspaceController({required this.connection})
-      : _dbService = DatabaseService(url: connection.url) {
+    : _dbService = DatabaseService(url: connection.url) {
     _init();
   }
 
@@ -41,35 +101,65 @@ class WorkspaceController extends ChangeNotifier {
   void _init() {
     fetchDatabases();
     checkConnection();
-    _connectionCheckTimer = Timer.periodic(const Duration(seconds: 15), (_) => checkConnection());
+    _connectionCheckTimer = Timer.periodic(
+      const Duration(seconds: 15),
+      (_) => checkConnection(),
+    );
   }
 
-  @override
   void dispose() {
     _connectionCheckTimer?.cancel();
-    super.dispose();
+    schemaState.dispose();
+    tabsState.dispose();
+    connectionState.dispose();
   }
 
-  /// Perform a heartbeat query to check if the connection is alive
+  void _publishSchemaState() {
+    schemaState.value = WorkspaceSchemaState(
+      isLoadingDatabases: _isLoadingDatabases,
+      errorMessage: _errorMessage,
+      databases: List<String>.unmodifiable(_databases),
+      databaseTables: immutableDatabaseTablesSnapshot(_databaseTables),
+    );
+  }
+
+  void _publishTabsState() {
+    tabsState.value = WorkspaceTabsState(
+      tabs: List.unmodifiable(_tabs),
+      activeTabId: _activeTabId,
+    );
+  }
+
+  void _publishConnectionState() {
+    connectionState.value = WorkspaceConnectionState(
+      isAlive: _isConnectionAlive,
+      isChecking: _isCheckingConnection,
+    );
+  }
+
+  /// Perform a heartbeat query to check if the connection is alive.
   Future<void> checkConnection() async {
     if (_isCheckingConnection) return;
+
+    final wasAlive = _isConnectionAlive;
     _isCheckingConnection = true;
-    notifyListeners();
+    if (!wasAlive) {
+      _publishConnectionState();
+    }
 
     try {
-      final isAlive = await _dbService.checkConnection();
-      if (_isConnectionAlive != isAlive) {
-        _isConnectionAlive = isAlive;
-      }
+      _isConnectionAlive = await _dbService.checkConnection();
     } catch (_) {
       _isConnectionAlive = false;
     } finally {
       _isCheckingConnection = false;
-      notifyListeners();
+      if (!wasAlive || wasAlive != _isConnectionAlive) {
+        _publishConnectionState();
+      }
     }
   }
 
-  /// Attempt to check connectivity and reload database schema lists if alive
+  /// Attempt to check connectivity and reload database schema lists if alive.
   Future<void> reconnect() async {
     await checkConnection();
     if (_isConnectionAlive) {
@@ -77,35 +167,31 @@ class WorkspaceController extends ChangeNotifier {
     }
   }
 
-  /// Fetch all databases and asynchronously retrieve tables for each database
+  /// Fetch all databases and tables in one Rust call.
   Future<void> fetchDatabases() async {
     _isLoadingDatabases = true;
     _errorMessage = '';
-    notifyListeners();
+    _publishSchemaState();
 
     try {
-      final dbs = await _dbService.fetchDatabases();
-      _databases = dbs;
-      notifyListeners();
-
-      // Fetch tables for all databases in parallel to avoid sequential network bottleneck
-      await Future.wait(dbs.map((db) async {
-        try {
-          final tables = await _dbService.fetchTables(db);
-          _databaseTables[db] = tables;
-        } catch (e) {
-          debugPrint("Failed to fetch tables for $db: $e");
-        }
-      }));
+      final overview = await _dbService.fetchSchemaOverview();
+      _databases = overview.databases.map((db) => db.name).toList();
+      _databaseTables
+        ..clear()
+        ..addEntries(
+          overview.databases.map(
+            (db) => MapEntry(db.name, List<String>.from(db.tables)),
+          ),
+        );
     } catch (e) {
       _errorMessage = e.toString();
     } finally {
       _isLoadingDatabases = false;
-      notifyListeners();
+      _publishSchemaState();
     }
   }
 
-  /// Open a browsing tab for a database table
+  /// Open a browsing tab for a database table.
   void openTableTab(String db, String table) {
     final tabId = "table_${db}_$table";
     final existingIndex = _tabs.indexWhere((t) => t.id == tabId);
@@ -113,93 +199,103 @@ class WorkspaceController extends ChangeNotifier {
     if (existingIndex >= 0) {
       _activeTabId = tabId;
     } else {
-      _tabs.add(WorkspaceTab(
-        id: tabId,
-        title: table,
-        databaseName: db,
-        tableName: table,
-      ));
+      _tabs.add(
+        WorkspaceTab(
+          id: tabId,
+          title: table,
+          databaseName: db,
+          tableName: table,
+        ),
+      );
       _activeTabId = tabId;
     }
-    notifyListeners();
+    _publishTabsState();
   }
 
-  /// Open a new custom SQL query execution tab
+  /// Open a new custom SQL query execution tab.
   void openQueryTab() {
     final tabId = "query_${DateTime.now().millisecondsSinceEpoch}";
-    _tabs.add(WorkspaceTab(
-      id: tabId,
-      title: "New Query",
-      databaseName: '',
-      tableName: null,
-    ));
+    _tabs.add(
+      WorkspaceTab(
+        id: tabId,
+        title: "New Query",
+        databaseName: '',
+        tableName: null,
+      ),
+    );
     _activeTabId = tabId;
-    notifyListeners();
+    _publishTabsState();
   }
 
-  /// Close an open tab
+  /// Close an open tab.
   void closeTab(String tabId) {
     final index = _tabs.indexWhere((t) => t.id == tabId);
-    if (index >= 0) {
-      _tabs.removeAt(index);
-      if (_activeTabId == tabId) {
-        if (_tabs.isNotEmpty) {
-          _activeTabId = _tabs[index > 0 ? index - 1 : 0].id;
-        } else {
-          _activeTabId = null;
-        }
+    if (index < 0) return;
+
+    _tabs.removeAt(index);
+    if (_activeTabId == tabId) {
+      if (_tabs.isNotEmpty) {
+        _activeTabId = _tabs[index > 0 ? index - 1 : 0].id;
+      } else {
+        _activeTabId = null;
       }
-      notifyListeners();
     }
+    _publishTabsState();
   }
 
-  /// Change active selection to the specified tab
+  /// Change active selection to the specified tab.
   void selectTab(String tabId) {
+    if (_activeTabId == tabId) return;
     _activeTabId = tabId;
-    notifyListeners();
+    _publishTabsState();
   }
 
   // ==========================================
   // Database / Schema CRUD Operations
   // ==========================================
 
-  /// Execute CREATE DATABASE
+  /// Execute CREATE DATABASE.
   Future<void> createDatabase(String name) async {
     await _dbService.createDatabase(name);
     await fetchDatabases();
   }
 
-  /// Execute RENAME DATABASE by migrating all tables
+  /// Execute RENAME DATABASE by migrating all tables.
   Future<void> renameDatabase(String oldDb, String newDb) async {
     final tables = _databaseTables[oldDb] ?? [];
     await _dbService.renameDatabase(oldDb, newDb, tables);
     await fetchDatabases();
   }
 
-  /// Execute DROP DATABASE
+  /// Execute DROP DATABASE.
   Future<void> dropDatabase(String db) async {
     await _dbService.dropDatabase(db);
     await fetchDatabases();
   }
 
-  /// Execute CREATE TABLE
+  /// Execute CREATE TABLE.
   Future<void> createTable(String db, String name) async {
     await _dbService.createTable(db, name);
     await fetchDatabases();
   }
 
-  /// Execute table cloning
-  Future<void> cloneTable(String db, String table, String newName, bool duplicateData) async {
+  /// Execute table cloning.
+  Future<void> cloneTable(
+    String db,
+    String table,
+    String newName,
+    bool duplicateData,
+  ) async {
     await _dbService.cloneTable(db, table, newName, duplicateData);
     await fetchDatabases();
   }
 
-  /// Execute TRUNCATE TABLE
+  /// Execute TRUNCATE TABLE.
   Future<void> truncateTable(String db, String table, bool disableFk) async {
     await _dbService.truncateTable(db, table, disableFk);
   }
 
-  /// Execute DROP TABLE
+  /// Execute DROP TABLE.
   Future<void> dropTable(String db, String table, bool disableFk) async {
     await _dbService.dropTable(db, table, disableFk);
     closeTab("table_${db}_$table");

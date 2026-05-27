@@ -28,7 +28,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   bool dco_decode_bool(dynamic raw);
 
   @protected
+  DatabaseSchema dco_decode_database_schema(dynamic raw);
+
+  @protected
+  PlatformInt64 dco_decode_i_64(dynamic raw);
+
+  @protected
   List<String> dco_decode_list_String(dynamic raw);
+
+  @protected
+  List<DatabaseSchema> dco_decode_list_database_schema(dynamic raw);
 
   @protected
   List<List<String>> dco_decode_list_list_String(dynamic raw);
@@ -38,6 +47,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   QueryResult dco_decode_query_result(dynamic raw);
+
+  @protected
+  SchemaOverview dco_decode_schema_overview(dynamic raw);
+
+  @protected
+  TablePageResult dco_decode_table_page_result(dynamic raw);
 
   @protected
   int dco_decode_u_8(dynamic raw);
@@ -55,7 +70,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   bool sse_decode_bool(SseDeserializer deserializer);
 
   @protected
+  DatabaseSchema sse_decode_database_schema(SseDeserializer deserializer);
+
+  @protected
+  PlatformInt64 sse_decode_i_64(SseDeserializer deserializer);
+
+  @protected
   List<String> sse_decode_list_String(SseDeserializer deserializer);
+
+  @protected
+  List<DatabaseSchema> sse_decode_list_database_schema(
+    SseDeserializer deserializer,
+  );
 
   @protected
   List<List<String>> sse_decode_list_list_String(SseDeserializer deserializer);
@@ -65,6 +91,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   QueryResult sse_decode_query_result(SseDeserializer deserializer);
+
+  @protected
+  SchemaOverview sse_decode_schema_overview(SseDeserializer deserializer);
+
+  @protected
+  TablePageResult sse_decode_table_page_result(SseDeserializer deserializer);
 
   @protected
   int sse_decode_u_8(SseDeserializer deserializer);
@@ -88,7 +120,22 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_bool(bool self, SseSerializer serializer);
 
   @protected
+  void sse_encode_database_schema(
+    DatabaseSchema self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_i_64(PlatformInt64 self, SseSerializer serializer);
+
+  @protected
   void sse_encode_list_String(List<String> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_database_schema(
+    List<DatabaseSchema> self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_list_list_String(
@@ -104,6 +151,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_query_result(QueryResult self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_schema_overview(
+    SchemaOverview self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_table_page_result(
+    TablePageResult self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_u_8(int self, SseSerializer serializer);

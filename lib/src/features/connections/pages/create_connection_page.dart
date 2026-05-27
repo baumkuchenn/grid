@@ -12,13 +12,13 @@ class CreateConnectionPage extends StatefulWidget {
 
 class _CreateConnectionPageState extends State<CreateConnectionPage> {
   final _formKey = GlobalKey<FormState>();
-  
+
   late TextEditingController _nameCtrl;
   late TextEditingController _hostCtrl;
   late TextEditingController _portCtrl;
   late TextEditingController _usernameCtrl;
   late TextEditingController _passwordCtrl;
-  
+
   String _selectedType = 'mysql';
 
   @override
@@ -84,8 +84,12 @@ class _CreateConnectionPageState extends State<CreateConnectionPage> {
       appBar: AppBar(
         backgroundColor: const Color(0xFFFAF8F5),
         elevation: 0,
-        iconTheme: const IconThemeData(color: Color(0xFF2D2D2D)), // Sumi Ink back button
-        shape: const Border(bottom: BorderSide(color: Color(0xFFE8E5DF), width: 0.5)), // Divider Clay
+        iconTheme: const IconThemeData(
+          color: Color(0xFF2D2D2D),
+        ), // Sumi Ink back button
+        shape: const Border(
+          bottom: BorderSide(color: Color(0xFFE8E5DF), width: 0.5),
+        ), // Divider Clay
         title: Text(
           isEdit ? "EDIT CONNECTION" : "NEW CONNECTION",
           style: const TextStyle(
@@ -112,7 +116,10 @@ class _CreateConnectionPageState extends State<CreateConnectionPage> {
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 10,
+                        ),
                         decoration: BoxDecoration(
                           color: const Color(0xFFF3EFE9), // Kraft Sand
                           border: Border.all(color: const Color(0xFFE8E5DF)),
@@ -151,7 +158,8 @@ class _CreateConnectionPageState extends State<CreateConnectionPage> {
                     controller: _nameCtrl,
                     label: "Connection Name",
                     hint: "e.g., Local Database",
-                    validator: (val) => val == null || val.isEmpty ? "Name is required" : null,
+                    validator: (val) =>
+                        val == null || val.isEmpty ? "Name is required" : null,
                   ),
                   const SizedBox(height: 16),
                   Row(
@@ -163,7 +171,9 @@ class _CreateConnectionPageState extends State<CreateConnectionPage> {
                           controller: _hostCtrl,
                           label: "Host",
                           hint: "127.0.0.1",
-                          validator: (val) => val == null || val.isEmpty ? "Host is required" : null,
+                          validator: (val) => val == null || val.isEmpty
+                              ? "Host is required"
+                              : null,
                         ),
                       ),
                       const SizedBox(width: 16),
@@ -174,7 +184,8 @@ class _CreateConnectionPageState extends State<CreateConnectionPage> {
                           label: "Port",
                           hint: "3306",
                           keyboardType: TextInputType.number,
-                          validator: (val) => val == null || val.isEmpty ? "Required" : null,
+                          validator: (val) =>
+                              val == null || val.isEmpty ? "Required" : null,
                         ),
                       ),
                     ],
@@ -184,7 +195,9 @@ class _CreateConnectionPageState extends State<CreateConnectionPage> {
                     controller: _usernameCtrl,
                     label: "Username",
                     hint: "root",
-                    validator: (val) => val == null || val.isEmpty ? "Username is required" : null,
+                    validator: (val) => val == null || val.isEmpty
+                        ? "Username is required"
+                        : null,
                   ),
                   const SizedBox(height: 16),
                   _buildTextField(
@@ -198,7 +211,9 @@ class _CreateConnectionPageState extends State<CreateConnectionPage> {
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: _save,
-                      child: Text(isEdit ? "SAVE CHANGES" : "CREATE CONNECTION"),
+                      child: Text(
+                        isEdit ? "SAVE CHANGES" : "CREATE CONNECTION",
+                      ),
                     ),
                   ),
                 ],
@@ -236,7 +251,7 @@ class _CreateConnectionPageState extends State<CreateConnectionPage> {
         Text(
           label.toUpperCase(),
           style: const TextStyle(
-            fontSize: 10, 
+            fontSize: 10,
             color: Color(0xFF73726F), // Wood Ash
             fontWeight: FontWeight.w600,
             letterSpacing: 0.8,
@@ -250,7 +265,10 @@ class _CreateConnectionPageState extends State<CreateConnectionPage> {
           style: const TextStyle(fontSize: 13, color: Color(0xFF2D2D2D)),
           decoration: InputDecoration(
             hintText: hint,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 12,
+            ),
           ),
           validator: validator,
         ),
